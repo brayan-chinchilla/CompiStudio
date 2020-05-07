@@ -32,21 +32,21 @@
 						File
 					</a>
 					<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-						<input id="fileInput" type="file" style="display:none;" onchange="openFile();" />
+						<input id="fileInput" type="file" style="display:none;"/>
 						<a class="dropdown-item" href="#" onclick="document.getElementById('fileInput').click();">Open File</a>
-						<a class="dropdown-item" href="#" onclick="newFileS();">New File</a>
+						<a id="newFileMenu" class="dropdown-item" href="#">New File</a>
 						<a class="dropdown-item" href="#">Save File</a>
 						<a class="dropdown-item" href="#">Save As...</a>
 					</div>
 				</li>
 				<li class="nav-item">
-					<a class="nav-link" href="#">Compile</a>
+					<a class="nav-link" href="#" onclick="compile()">Compile</a>
 				</li>
 				<li class="nav-item">
-					<a class="nav-link" href="#">Optimize</a>
+					<a class="nav-link" href="#" onclick="optimize()">Optimize</a>
 				</li>
 				<li class="nav-item">
-					<a class="nav-link" href="#">
+					<a class="nav-link" href="#" onclick="execute()">
 						Execute&nbsp
 						<i class="fa fa-play-circle" style="color:green"></i>
 					</a>
@@ -59,16 +59,19 @@
 		<div class="row h-50 no-gutters">
 			<div id="tabs" class="col-lg-4 h-100 border-bottom border-secondary">	   
 				<ul>
-					<li><a href="#tabs-1">Untitled</a> <span class="ui-icon ui-icon-close" role="presentation">Remove Tab</span></li>
+					<li>
+						<a href="#FileJ_1">FileJ_1</a><span class="ui-icon ui-icon-close" role="presentation">x</span>
+					</li>
 				</ul>
-				<div id="tabs-1">
-					<p>Proin elit arcu, rutrum commodo, vehicula tempus, commodo a, risus. Curabitur nec arcu. Donec sollicitudin mi sit amet mauris. Nam elementum quam ullamcorper ante. Etiam aliquet massa et lorem. Mauris dapibus lacus auctor risus. Aenean tempor ullamcorper leo. Vivamus sed magna quis ligula eleifend adipiscing. Duis orci. Aliquam sodales tortor vitae ipsum. Aliquam nulla. Duis aliquam molestie erat. Ut et mauris vel pede varius sollicitudin. Sed ut dolor nec orci tincidunt interdum. Phasellus ipsum. Nunc tristique tempus lectus.</p>
+				<div id="FileJ_1" style="height:90%">
+					<textarea style="width: 100%; height:100%" id="jEditor_FileJ_1"></textarea>
 				</div>
 			</div>
 			<div class="col-lg-4 h-100 border-left border-bottom border-secondary">
-				<textarea style="width: 100%; height:100%" id="c3D_Editor1"></textarea>
+				<textarea style="width: 100%; height:100%" id="C3D_Editor"></textarea>
 			</div>
 			<div class="col-lg-4 h-100 border-left border-bottom border-secondary">
+				<textarea style="width: 100%; height:100%" id="C3D_Optimizado_Editor"></textarea>
 			</div>
 		</div>
 		<div class="row h-50 no-gutters">
@@ -95,7 +98,7 @@
 					<div class="tab-pane fade" id="symbol-table" role="tabpanel"
 						aria-labelledby="symbol-table-tab">
 					
-						<table id="example" class="table-hover">
+						<table id="table_SymbolTable" class="table-hover">
 							<thead>
 								<tr>
 									<th>Name</th>
