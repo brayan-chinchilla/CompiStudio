@@ -133,7 +133,7 @@
 %left   'OR'
 %left   'AND'
 %left   'NOTEQUAL' 'EQUALEQUAL' 'EQUALEQUALEQUAL'
-%precedence   'GREATER' 'GREATEREQUAL' 'LESS' 'LESSEQUAL'  
+%left   'GREATER' 'GREATEREQUAL' 'LESS' 'LESSEQUAL'  
 %left   'PLUS' 'MINUS'
 %left   'TIMES' 'DIVIDE' 'MODULE'
 %right  'POW'
@@ -197,6 +197,10 @@ funcDeclar
         { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $1, name: $2, params: $4, block: $7 }; }
     | R_PUBLIC type ID PAR_L l_param PAR_R BRACE_L l_statement BRACE_R
         { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $2, name: $3, params: $5, block: $8 }; }
+    | ID ID PAR_L l_param PAR_R BRACE_L l_statement BRACE_R
+        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $1, name: $2, params: $4, block: $7 }; }
+    | R_PUBLIC ID ID PAR_L l_param PAR_R BRACE_L l_statement BRACE_R
+        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $2, name: $3, params: $5, block: $8 }; }
 ;
 
 l_param
@@ -243,10 +247,13 @@ statement
     | R_TRY BRACE_L l_statement BRACE_R R_CATCH PAR_L ID ID PAR_R BRACE_L l_statement BRACE_R
         { $$ = {type: TYPE_OP.TRY, tryBlock: $3, exceptionType: $7, catchBlock: $11}; }
     | exp SEMICOLON
+        { $$ = $1 }
 ;
 
 varDeclar
     : type ID EQUAL exp
+        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: $4} }
+    | ID ID EQUAL exp
         { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: $4} }
     | R_VAR ID COLONEQUAL exp  
         { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: $4} }
@@ -255,6 +262,8 @@ varDeclar
     | R_GLOBAL ID COLONEQUAL exp  
         { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: $4} }
     | type ID 
+        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: null} }
+    | ID ID 
         { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: null} }
 ;
 
@@ -277,6 +286,12 @@ type
 primType
     : R_INTEGER
         { $$ = TYPE_VAL.INTEGER }
+    | R_DOUBLE
+        { $$ = TYPE_VAL.DOUBLE }
+    | R_CHAR
+        { $$ = TYPE_VAL.CHAR }
+    | R_BOOLEAN
+        { $$ = TYPE_VAL.BOOLEAN }
 ;
 
 for_init
@@ -373,6 +388,8 @@ exp
         { $$ = $1; }
     | exp_arithmetic
         { $$ = $1; }
+    | exp_logic
+        { $$ = $1; }
     | BRACE_L l_exp BRACE_R
         { $$ = AST_API.newVal(TYPE_VAL.ARRAY, $1); }
     | exp TERNARY exp COLON exp
@@ -405,14 +422,26 @@ update
 ;
 
 exp_arithmetic
-    : MINUS exp %prec UMENOS
+    : MINUS exp %prec UMINUS
         { $$ = {type: TYPE_OP.UMINUS, op1: $2}; }
     | exp PLUS exp
         { $$ = {type: TYPE_OP.PLUS, op1: $1, op: $2, op2: $3}; }
+    | exp MINUS exp
+        { $$ = {type: TYPE_OP.MINUS, op1: $1, op: $2, op2: $3}; }
+    | exp TIMES exp
+        { $$ = {type: TYPE_OP.TIMES, op1: $1, op: $2, op2: $3}; }
+    | exp DIVIDE exp
+        { $$ = {type: TYPE_OP.DIVIDE, op1: $1, op: $2, op2: $3}; }
+    | exp MODULE exp
+        { $$ = {type: TYPE_OP.MODULE, op1: $1, op: $2, op2: $3}; }
+    | exp POW exp
+        { $$ = {type: TYPE_OP.POW, op1: $1, op: $2, op2: $3}; }
 ;
 
 exp_logic
-    : exp EQUALEQUAL exp
+    : exp EQUALEQUALEQUAL exp
+        { $$ = {type: TYPE_OP.EQUALEQUALEQUAL, op1: $1, op: $2, op2: $3}; }
+    | exp EQUALEQUAL exp
         { $$ = {type: TYPE_OP.EQUALEQUAL, op1: $1, op: $2, op2: $3}; }
     | exp NOTEQUAL exp
         { $$ = {type: TYPE_OP.NOTEQUAL, op1: $1, op: $2, op2: $3}; }

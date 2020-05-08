@@ -35,6 +35,7 @@ const TYPE_OP = {
     GREATEREQUAL:   'OP_GREATEREQAL',       //
     NOTEQUAL:       'OP_NOTEQUAL',          //
     EQUALEQUAL:     'OP_EQUALEQUAL',        //
+    EQUALEQUALEQUAL:'OP_EQUALEQUALEQUAL',        //
     AND:            'OP_AND',               //
     OR:             'OP_OR',                //
     NOT:            'OP_NOT',               //

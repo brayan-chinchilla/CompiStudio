@@ -1,27 +1,9 @@
 import entrada.js, otro.JS
 
-integer a = b;
-var a := (5+2);
-estudiante b;
+var array := {1, 2, 3}
 
 double[] function(integer[] a, char b, BOOLEAN c){
-    for(i = 5;a;a++){
-    }
-    for(;;b--){
-    }
-
-    id = call().access.access2[1];
-    id = call(1, $2)[3];
-    id = call(a=1, b=2)[3];
-
-    try{
-
-    }catch(Exception e){
-
-    }
-
-    a = strc Integer[2];
-    b = strc Estudiante();
+    id.id2.id3[3].id4[3].call();
 }
 
 define Estudiante as [String nombre="Tupido", integer b]
