@@ -313,7 +313,16 @@ case
 
 call
     : ID PAR_L l_exp PAR_R
-        { $$ = {type:TYPE_OP.CALL, call: $1, params: $3 }; }
+        { $$ = {type:TYPE_OP.CALL, call: $1, params: $3 } }
+    | ID PAR_L l_assign PAR_R
+        { $$ = {type:TYPE_OP.CALL_JS, call: $1, params: $3 } }
+;
+
+l_assign
+    : l_assign COMMA varAssign
+        { $1.push($3); $$ = $1 }
+    | varAssign
+        { $$ = [$1] }
 ;
 
 l_exp
@@ -326,7 +335,7 @@ l_exp
 ;
 
 access
-    : ID BRACKET_L exp BRACKET_R
+    : exp BRACKET_L exp BRACKET_R
         { $$ = {type: TYPE_OP.ACCESS, base: $1, index: $3} }
 ;
 

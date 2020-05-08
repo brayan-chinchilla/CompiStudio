@@ -5,6 +5,7 @@ const TYPE_OP = {
     DECLAR:	        'DECLAR',               //
     ASSIGN:		    'ASSIGN',
     CALL:           'CALL',
+    CALL_JS:        'CALL_JS',
     IF:				'IF',                   //
     SWITCH:         'SWITCH',               //
     CASE:           'CASE',                 //

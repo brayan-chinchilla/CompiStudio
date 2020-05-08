@@ -2,16 +2,16 @@ import entrada.js, otro.JS
 
 integer a = b;
 var a := (5+2);
-integer a;
 estudiante b;
 
 void function(integer a, char b, BOOLEAN c){
     for(i = 5;a;a++){
-
     }
     for(;;b--){
-
     }
 
-    call(1, true);
+    id = access[1];
+    id = call(1, 2)[3];
+    id = call(a=1, b=2)[3];
+
 }
