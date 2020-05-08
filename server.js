@@ -1,6 +1,7 @@
 var express = require('express');
 var server = express();
 
+server.use(express.static(__dirname + '/frontend'));
 server.use(express.json())
 
 server.get('/', function(req, res){
@@ -27,8 +28,6 @@ server.post('/execute', function(req, res){
         console: "Consola"
     })
 })
-
-server.use(express.static(__dirname + '/frontend'));
 
 server.listen(8000);
 console.log("Server listening on http://localhost:8000/")
