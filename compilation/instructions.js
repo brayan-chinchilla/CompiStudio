@@ -15,9 +15,11 @@ const TYPE_OP = {
     CONTINUE:       'CONTINUE',             //
     BREAK:          'BREAK',                //
     RETURN:         'RETURN',
+    DEFINE_STRC:    'DEFINE_STRC',
 
     ATOMIC:         'ATOMIC',
 
+    DOLLAR:         'OP_DOLLAR',
     ACCESS:         'OP_ACCESS',
     TERNARY:        'OP_TERNARY',
     UMINUS:         'OP_UMINUS',            //
@@ -40,6 +42,8 @@ const TYPE_OP = {
     DOT:            'DOT',
     CAST:           'CAST',
     THROW:          'THROW',
+
+    STRC:           'STRC',
 
     PLUSPLUS:        'OP_PLUSPLUS',
     MINUSMINUS:      'OP_MINUSMINUS',

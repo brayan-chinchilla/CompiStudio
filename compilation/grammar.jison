@@ -46,6 +46,7 @@
 "||"                                        return 'OR';
 "^"                                         return 'XOR';
 "!"                                         return 'NOT';
+"$"                                         return 'DOLLAR';
 
 "null"                                      return 'R_NULL';
 "integer"                                   return 'R_INTEGER';
@@ -135,7 +136,7 @@
 %left   'PLUS' 'MINUS'
 %left   'TIMES' 'DIVIDE' 'MODULE'
 %right  'POW'
-%right  'NOT' UMINUS
+%right  'NOT' 'DOLLAR' UMINUS
 %left   'PAR_L' 'PAR_R' 'DOT' 'BRACKET_L' 'BRACKET_R'
 
 %start ini
@@ -165,6 +166,20 @@ global
         { $$ = $1; }
     | varDeclar
         { $$ = $1; }
+    | defineStruct
+        { $$ = $1; }
+;
+
+defineStruct
+    : R_DEFINE ID R_AS BRACKET_L l_declar BRACKET_R
+        { $$ = { type: TYPE_OP.DEFINE_STRC, id: $2, l_declar: $5} }
+;
+
+l_declar
+    : l_declar COMMA varDeclar
+        { $1.push($3); $$ = $1}
+    | varDeclar
+        { $$ = [$1] }
 ;
 
 import_list
@@ -208,6 +223,8 @@ statement
         { $$ = $1; }
     | jump_control
         { $$ = $1; }
+    | defineStruct
+        { $$ = $1; }
     | if
         { $$ = $1; }
     | R_WHILE PAR_L exp PAR_R BRACE_L l_statement BRACE_R
@@ -247,9 +264,13 @@ varAssign
 type
     : primType
         { $$ = $1 }
+    | primType BRACKET_L BRACKET_R
+        { $$ = $1 }
     | R_VOID
         { $$ = TYPE_VAL.VOID }
     | ID
+        { $$ = $1 }
+    | ID BRACKET_L BRACKET_R
         { $$ = $1 }
 ;
 
@@ -374,6 +395,14 @@ exp
         { $$ = {type: TYPE_OP.DOT, base: $1, next: $3} }
     | PAR_L primType PAR_R exp
         { $$ = { type: TYPE_OP.CAST, endType: $2, exp: $4 } }
+    | R_STRC ID BRACKET_L exp BRACKET_R
+        { $$ = { type: TYPE_OP.STRC, jType: $2, exp: $4} }
+    | R_STRC primType BRACKET_L exp BRACKET_R
+        { $$ = { type: TYPE_OP.STRC, jType: $2, exp: $4} }
+    | R_STRC ID PAR_L PAR_R
+        { $$ = { type: TYPE_OP.STRC, jType: $2, exp: 1} }
+    | DOLLAR exp
+        { $$ = {type: TYPE_OP.DOLLAR, exp: $2} }
 ;
 
 update
