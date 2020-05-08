@@ -125,19 +125,22 @@
 %}
 
 /* Asociación de operadores y precedencia */
-%right  'EQUAL'
+%right  'EQUAL' 'COLONEQUAL'
+%left   'R_THROW'
 %right  'TERNARY' 'COLON'
 %left   'MINUSMINUS' 'PLUSPLUS'
 %left   'XOR'
 %left   'OR'
 %left   'AND'
 %left   'NOTEQUAL' 'EQUALEQUAL' 'EQUALEQUALEQUAL'
-%left   'GREATER' 'GREATEREQUAL' 'LESS' 'LESSEQUAL'  
+%precedence   'GREATER' 'GREATEREQUAL' 'LESS' 'LESSEQUAL'  
 %left   'PLUS' 'MINUS'
 %left   'TIMES' 'DIVIDE' 'MODULE'
 %right  'POW'
 %right  'NOT' 'DOLLAR' UMINUS
-%left   'PAR_L' 'PAR_R' 'DOT' 'BRACKET_L' 'BRACKET_R'
+%left   'PAR_L' 'PAR_R' 'BRACKET_L' 'BRACKET_R'
+%left   'DOT'
+%left   ID
 
 %start ini
 
@@ -219,8 +222,6 @@ statement
         { $$ = $1; }
     | varAssign
         { $$ = $1; }
-    | call
-        { $$ = $1; }
     | jump_control
         { $$ = $1; }
     | defineStruct
@@ -241,6 +242,7 @@ statement
         { $$ = { type: TYPE_OP.THROW, exp: $2}}
     | R_TRY BRACE_L l_statement BRACE_R R_CATCH PAR_L ID ID PAR_R BRACE_L l_statement BRACE_R
         { $$ = {type: TYPE_OP.TRY, tryBlock: $3, exceptionType: $7, catchBlock: $11}; }
+    | exp SEMICOLON
 ;
 
 varDeclar
@@ -257,7 +259,7 @@ varDeclar
 ;
 
 varAssign
-    : ID EQUAL exp
+    : exp EQUAL exp
         { $$ = {type: TYPE_OP.ASSIGN, id:$1, exp: $3} }
 ;
 
@@ -268,8 +270,6 @@ type
         { $$ = $1 }
     | R_VOID
         { $$ = TYPE_VAL.VOID }
-    | ID
-        { $$ = $1 }
     | ID BRACKET_L BRACKET_R
         { $$ = $1 }
 ;
@@ -277,12 +277,6 @@ type
 primType
     : R_INTEGER
         { $$ = TYPE_VAL.INTEGER }
-    | R_DOUBLE
-        { $$ = TYPE_VAL.DOUBLE }
-    | R_CHAR
-        { $$ = TYPE_VAL.CHAR }
-    | R_BOOLEAN
-        { $$ = TYPE_VAL.BOOLEAN }
 ;
 
 for_init
@@ -308,9 +302,9 @@ jump
         { $$ = {type: TYPE_OP.CONTINUE }; }
     | R_BREAK
         { $$ = {type: TYPE_OP.BREAK }; }
-    | R_RETURN
+    | R_RETURN SEMICOLON
         { $$ = {type: TYPE_OP.RETURN, exp: null }; }
-    | R_RETURN exp
+    | R_RETURN exp SEMICOLON
         { $$ = {type: TYPE_OP.RETURN, exp: $2 }; }
 ;
 
@@ -343,9 +337,9 @@ case
 ;
 
 call
-    : ID PAR_L l_exp PAR_R
+    : exp PAR_L l_exp PAR_R
         { $$ = {type:TYPE_OP.CALL, call: $1, params: $3 } }
-    | ID PAR_L l_assign PAR_R
+    | exp PAR_L l_assign PAR_R
         { $$ = {type:TYPE_OP.CALL_JS, call: $1, params: $3 } }
 ;
 
@@ -378,8 +372,6 @@ exp
     | call
         { $$ = $1; }
     | exp_arithmetic
-        { $$ = $1; }
-    | exp_logic
         { $$ = $1; }
     | BRACE_L l_exp BRACE_R
         { $$ = AST_API.newVal(TYPE_VAL.ARRAY, $1); }
@@ -417,16 +409,6 @@ exp_arithmetic
         { $$ = {type: TYPE_OP.UMINUS, op1: $2}; }
     | exp PLUS exp
         { $$ = {type: TYPE_OP.PLUS, op1: $1, op: $2, op2: $3}; }
-    | exp MINUS exp
-        { $$ = {type: TYPE_OP.MINUS, op1: $1, op: $2, op2: $3}; }
-    | exp TIMES exp
-        { $$ = {type: TYPE_OP.TIMES, op1: $1, op: $2, op2: $3}; }
-    | exp DIVIDE exp
-        { $$ = {type: TYPE_OP.DIVIDE, op1: $1, op: $2, op2: $3}; }
-    | exp MODULE exp
-        { $$ = {type: TYPE_OP.MODULE, op1: $1, op: $2, op2: $3}; }
-    | exp POW exp
-        { $$ = {type: TYPE_OP.POW, op1: $1, op: $2, op2: $3}; }
 ;
 
 exp_logic
