@@ -10,8 +10,13 @@ void function(integer a, char b, BOOLEAN c){
     for(;;b--){
     }
 
-    id = access[1];
+    id = call().access.access2[1];
     id = call(1, 2)[3];
     id = call(a=1, b=2)[3];
 
+    try{
+
+    }catch(Exception e){
+        
+    }
 }

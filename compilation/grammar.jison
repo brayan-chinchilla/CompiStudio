@@ -220,6 +220,10 @@ statement
         { $$ = {type: TYPE_OP.FOR, init: $3, cond: null, update: $6, block: $9 }; }
     | R_SWITCH PAR_L exp PAR_R BRACE_L l_case BRACE_R
         { $$ = {type: TYPE_OP.SWITCH, switch: $3, cases: $6 }; }
+    | R_THROW exp
+        { $$ = { type: TYPE_OP.THROW, exp: $2}}
+    | R_TRY BRACE_L l_statement BRACE_R R_CATCH PAR_L ID ID PAR_R BRACE_L l_statement BRACE_R
+        { $$ = {type: TYPE_OP.TRY, tryBlock: $3, exceptionType: $7, catchBlock: $11}; }
 ;
 
 varDeclar
@@ -239,7 +243,17 @@ varAssign
     : ID EQUAL exp
         { $$ = {type: TYPE_OP.ASSIGN, id:$1, exp: $3} }
 ;
+
 type
+    : primType
+        { $$ = $1 }
+    | R_VOID
+        { $$ = TYPE_VAL.VOID }
+    | ID
+        { $$ = $1 }
+;
+
+primType
     : R_INTEGER
         { $$ = TYPE_VAL.INTEGER }
     | R_DOUBLE
@@ -248,10 +262,6 @@ type
         { $$ = TYPE_VAL.CHAR }
     | R_BOOLEAN
         { $$ = TYPE_VAL.BOOLEAN }
-    | R_VOID
-        { $$ = TYPE_VAL.VOID }
-    | ID
-        { $$ = $1 }
 ;
 
 for_init
@@ -360,12 +370,16 @@ exp
         { $$ = $1; }
     | update
         { $$ = $1; }
+    | exp DOT exp
+        { $$ = {type: TYPE_OP.DOT, base: $1, next: $3} }
+    | PAR_L primType PAR_R exp
+        { $$ = { type: TYPE_OP.CAST, endType: $2, exp: $4 } }
 ;
 
 update
-    : exp PLUSPLUS
+    : ID PLUSPLUS
         { $$ = {type: TYPE_OP.PLUSPLUS, op1: $1}; }
-    | exp MINUSMINUS
+    | ID MINUSMINUS
         { $$ = {type: TYPE_OP.MINUSMINUS, op1: $1}; }
 ;
 

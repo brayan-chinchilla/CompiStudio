@@ -37,6 +37,9 @@ const TYPE_OP = {
     OR:             'OP_OR',                //
     NOT:            'OP_NOT',               //
     XOR:            'OP_XOR',
+    DOT:            'DOT',
+    CAST:           'CAST',
+    THROW:          'THROW',
 
     PLUSPLUS:        'OP_PLUSPLUS',
     MINUSMINUS:      'OP_MINUSMINUS',
