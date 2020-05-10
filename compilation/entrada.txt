@@ -1,9 +1,0 @@
-import entrada.js, otro.JS
-
-var array := {1, 2, 3}
-
-double[] function(integer[] a, char b, BOOLEAN c){
-    id.id2.id3[3].id4[3].call();
-}
-
-define Estudiante as [String nombre="Tupido", integer b]

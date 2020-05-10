@@ -93,14 +93,14 @@
 ([a-zA-Z])[a-zA-ZñÑ0-9_]*	                return 'ID';
 
 
-<STRING>\"                              { console.log("STRING: " + strBuffer); this.popState(); yytext = strBuffer; return 'LITERAL_STRING'; }
+<STRING>\"                              { this.popState(); yytext = strBuffer; return 'LITERAL_STRING'; }
 <STRING>\\\"                            { strBuffer += "\""; }
 <STRING>\\\\                            { strBuffer += "\\"; }
 <STRING>\\n                             { strBuffer += "\n"; }
 <STRING>\\r                             { strBuffer += "\r"; }
 <STRING>\\t                             { strBuffer += "\t"; }
 <STRING>.                               { strBuffer += yytext; }
-<STRING><<EOF>>                         { console.log("unclosed String"); }
+<STRING><<EOF>>                         { console.log("TODO error unclosed String"); }
 
 <CHAR>\\\'\'                            { yytext = "'"; this.popState(); return 'LITERAL_CHAR'; };
 <CHAR>\\\\\'                            { yytext = "\\"; this.popState(); return 'LITERAL_CHAR'; };
@@ -110,7 +110,7 @@
 <CHAR>\\0\'                             { yytext = "\0"; this.popState(); return 'LITERAL_CHAR'; };
 <CHAR>[^']\'                            { yytext = yytext.slice(0, -1);  this.popState(); return 'LITERAL_CHAR'; };
 <CHAR>\'                                { yytext = "\0"; this.popState(); return 'LITERAL_CHAR'; }
-<CHAR>.                                 { console.log("invalid Char... skipping"); this.popState(); }
+<CHAR>.                                 { console.log("TODO error invalid Char... skipping"); this.popState(); }
 
 <<EOF>>				                    return 'EOF';
 
@@ -276,11 +276,11 @@ type
     : primType
         { $$ = $1 }
     | primType BRACKET_L BRACKET_R
-        { $$ = $1 }
+        { $$ = $1 + "[]"}
     | R_VOID
         { $$ = TYPE_VAL.VOID }
     | ID BRACKET_L BRACKET_R
-        { $$ = $1 }
+        { $$ = $1  + "[]"}
 ;
 
 primType
@@ -391,7 +391,7 @@ exp
     | exp_logic
         { $$ = $1; }
     | BRACE_L l_exp BRACE_R
-        { $$ = AST_API.newVal(TYPE_VAL.ARRAY, $1); }
+        { $$ = {type: TYPE_OP.ARRAY_DEF, jType: TYPE_VAL.ARRAY, val: $2}; }
     | exp TERNARY exp COLON exp
         { $$ = {type: TYPE_OP.TERNARY, cond: $1, ifTrue: $3, ifFalse: $5 }; }
     | PAR_L exp PAR_R
@@ -405,9 +405,9 @@ exp
     | PAR_L primType PAR_R exp
         { $$ = { type: TYPE_OP.CAST, endType: $2, exp: $4 } }
     | R_STRC ID BRACKET_L exp BRACKET_R
-        { $$ = { type: TYPE_OP.STRC, jType: $2, exp: $4} }
+        { $$ = { type: TYPE_OP.STRC, jType: $2 + "[]", exp: $4} }
     | R_STRC primType BRACKET_L exp BRACKET_R
-        { $$ = { type: TYPE_OP.STRC, jType: $2, exp: $4} }
+        { $$ = { type: TYPE_OP.STRC, jType: $2 + "[]", exp: $4} }
     | R_STRC ID PAR_L PAR_R
         { $$ = { type: TYPE_OP.STRC, jType: $2, exp: 1} }
     | DOLLAR exp

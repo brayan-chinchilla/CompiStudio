@@ -1,0 +1,9 @@
+define Estudiante as [integer nombre, integer clave]
+
+integer calcula(integer a, integer b){
+    if(true){
+        integer c = b;
+    }
+
+    Estudiante e = strc Estudiante();
+} 

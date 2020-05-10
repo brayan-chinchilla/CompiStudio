@@ -43,6 +43,7 @@ const TYPE_OP = {
     DOT:            'DOT',
     CAST:           'CAST',
     THROW:          'THROW',
+    ARRAY_DEF:      'ARRAY_DEF',
 
     STRC:           'STRC',
 
