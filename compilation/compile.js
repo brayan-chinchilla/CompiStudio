@@ -1,127 +1,237 @@
-var fs = require('fs'); 
-var parser = require('./grammar');
+let fs = require('fs'); 
+let parser = require('./grammar');
 
-const TYPE_OP = require('./instructions').TYPE_OP
+const TYPE_OP = require('./util').TYPE_OP
+
 let Scope = require('./util').Scope
 let Symbol = require('./util').Symbol
 let Error = require('./util').Error
 
-function buildST(statements, currentScope, isGlobal){
+let isImplicitCast = require('./util').isImplicitCast;
+
+let collectGlobals = require('./collectGlobals').collectGlobals;
+
+let getExpType = require('./expTypes').getExpType;
+
+let isPrimType = require('./util').isPrimType;
+
+function throwError(detail, statement){
+    throw {type:"SEMANTIC", detail: detail, line:statement.line, column: statement.column}
+}
+
+function buildSymbolTable(statements, currentScope, isGlobal){
     statements.forEach( (statement) => {
-
-        if(statement.type == TYPE_OP.DEFINE_STRC){
-            var newScope = addScope("_obj_" + statement.id, "strc_def", null);
-
-            //save and restore relative Pos
-            var relativePosTmp = relativePos;
-            relativePos = 0;
-            buildST(statement.l_declar, newScope, false);
-            newScope.size = relativePos;
-            relativePos = relativePosTmp;
-
-        }
-        else if(statement.type == TYPE_OP.DECLAR){
-            var sym = new Symbol(statement.id, isGlobal ? "var_global" : "var_local", statement.jType, currentScope.id, 1, relativePos++);
-            currentScope.addSymbol(sym);
-            //TODO validation
-        }
-        else if(statement.type == TYPE_OP.IF){
-            var newScope = addScope("if", "Block", currentScope.id);
-            buildST(statement.ifTrue, newScope, false);
-
-            if(statement.ifFalse){
-                buildST(statement.ifFalse, currentScope, false)
+        try{
+            if(statement.type == TYPE_OP.DEFINE_STRC){
+                //do nothing
             }
-        }
-        else if(statement.type == TYPE_OP.SWITCH){
-            var newScope = addScope("switch", "Block", currentScope.id);
+            else if(statement.type == TYPE_OP.DECLAR){
+                if(isGlobal){
+                    var sym = currentScope.getSymbol(_symbolTable, statement.id);
 
-            statement.cases.forEach((c) => {
-                buildST(c.ifTrue, newScope, false);
-            })
-        }
-        else if(statement.type == TYPE_OP.FOR){
-            var newScope = addScope("for", "Block", currentScope.id);
-            if(statement.init)
-                buildST([statement.init], newScope, false);
-            if(statement.update)
-                buildST([statement.update], newScope, false);
+                    //put type if it was not explicit
+                    if(statement.jType.toUpperCase() == 'VAR' || statement.jType.toUpperCase() == 'CONST' || statement.jType.toUpperCase() == 'GLOBAL'){
+                        var expType = getExpType(statement.exp, _symbolTable, currentScope);
+                        sym.jType = expType;
 
-            buildST(statement.block, newScope, false);
-        }
-        else if(statement.type == TYPE_OP.WHILE){
-            var newScope = addScope("while", "Block", currentScope.id);
-            buildST(statement.block, newScope, false);
-        }
-        else if(statement.type == TYPE_OP.DO_WHILE){
-            var newScope = addScope("do_while", "Block", currentScope.id);
-            buildST(statement.block, newScope, false);
-        }
-        else if(statement.type == TYPE_OP.FUNC_DEF){
-            //save relativePos
-            var relativePosTmp = relativePos;                        
-            
-            //reserve one for return
-            relativePos = 1;
+                        sym.type = isPrimType(sym.jType) ? "_global_prim" : "_global_obj";
+                        if(statement.jType.toUpperCase() == 'CONST')
+                            sym.const = true;
+                    }
+                    //verify type if it was explicit
+                    else{
+                        if(statement.exp != null){
+                            var expType = getExpType(statement.exp, _symbolTable, currentScope);
+                            if(statement.jType.toUpperCase() != expType.toUpperCase()){
 
-            var funcId = "_func_" + statement.name;
-            statement.params.forEach((param) => {
-                funcId += "-" + param.jType
-            })
-            var newScope = addScope(funcId, "func", "_global");
+                                if(! isImplicitCast(statement.jType, expType))
+                                    throwError(`Type missmatch\n${statement.jType} = ${expType}`, statement);
+                            }
+                        }
+                    }
+                }
+                else{
+                    var sym = new Symbol(statement.id, isPrimType(statement.jType) ? "_local_prim" : "_local_obj", statement.jType, currentScope.id, 1, _relativePos++);
+                    currentScope.addSymbol(sym);
 
-            statement.params.forEach((param) => {
-                var sym = new Symbol(param.id, "var_local", param.jType, newScope.id, 1, relativePos++)
-                newScope.addSymbol(sym);
-            })
+                    //put type if it was not explicit
+                    if(statement.jType.toUpperCase() == 'VAR' || statement.jType.toUpperCase() == 'CONST' || statement.jType.toUpperCase() == 'GLOBAL'){
+                        var expType = getExpType(statement.exp, _symbolTable, currentScope);
+                        sym.jType = expType;
 
-            buildST(statement.block, newScope, false);
+                        sym.type = isPrimType(sym.jType) ? "_local_prim" : "_local_obj";
+                        if(statement.jType.toUpperCase() == 'CONST')
+                            sym.const = true;
+                    }
+                    //verify type if it was explicit
+                    else{
+                        if(statement.exp != null){
+                            var expType = getExpType(statement.exp, _symbolTable, currentScope);
+                            if(statement.jType.toUpperCase() != expType.toUpperCase()){
 
-            //update size and restore relativePos
-            newScope.size = relativePos;
-            relativePos = relativePosTmp;
+                                if(! isImplicitCast(statement.jType, expType))
+                                    throwError(`Type missmatch\n${statement.jType} = ${expType}`, statement);
+                            }
+                        }
+                    }
+                }
+            }
+            else if(statement.type == TYPE_OP.ASSIGN){
+                var typeSym = getExpType(statement.id, _symbolTable, currentScope);
+                var typeExp = getExpType(statement.exp, _symbolTable, currentScope);
 
-            currentScope.addSymbol(new Symbol(funcId, "func", statement.returnType, "_global", newScope.size, -1))
-        }
-        else{
-            //TODO
-            console.error(statement.type + " aun no ha sido implementado");
+                if(typeSym != typeExp && !isImplicitCast(typeSym, typeExp))
+                    throwError(`Type missmatch\n${typeSym} = ${typeExp}`, statement);
+            }
+            else if(statement.type == TYPE_OP.IF){
+                var newScope = addScope("if", "Block", currentScope.id);
+                buildSymbolTable(statement.ifTrue, newScope, false);
+
+                if(statement.ifFalse){
+                    buildSymbolTable(statement.ifFalse, currentScope, false)
+                }
+            }
+            else if(statement.type == TYPE_OP.SWITCH){
+                var newScope = addScope("switch", "Block", currentScope.id);
+
+                statement.cases.forEach((c) => {
+                    buildSymbolTable(c.ifTrue, newScope, false);
+                })
+            }
+            else if(statement.type == TYPE_OP.FOR){
+                var newScope = addScope("for", "Block", currentScope.id);
+                if(statement.init)
+                    buildSymbolTable([statement.init], newScope, false);
+                if(statement.update)
+                    buildSymbolTable([statement.update], newScope, false);
+
+                buildSymbolTable(statement.block, newScope, false);
+            }
+            else if(statement.type == TYPE_OP.WHILE){
+                var newScope = addScope("while", "Block", currentScope.id);
+                buildSymbolTable(statement.block, newScope, false);
+            }
+            else if(statement.type == TYPE_OP.DO_WHILE){
+                var newScope = addScope("do_while", "Block", currentScope.id);
+                buildSymbolTable(statement.block, newScope, false);
+            }
+            else if(statement.type == TYPE_OP.FUNC_DEF){
+                //save _relativePos
+                var relativePosTmp = _relativePos;                        
+                
+                //reserve one for return
+                _relativePos = 1;
+
+                var funcId = "_func_" + statement.name;
+                statement.params.forEach((param) => {
+                    funcId += "-" + param.jType
+                })
+                var newScope = addScope(funcId, "func", "_global");
+
+                statement.params.forEach((param) => {
+                    var sym = new Symbol(param.id, isPrimType(param.jType) ? "_local_prim" : "_local_obj", param.jType, newScope.id, 1, _relativePos++)
+                    newScope.addSymbol(sym);
+                })
+
+                buildSymbolTable(statement.block, newScope, false);
+
+                //update size of scope and size of symbol in global scope
+                newScope.size = _relativePos;
+                currentScope.getSymbol(_symbolTable, funcId, true).size = _relativePos;
+
+                //restore relativePos
+                _relativePos = relativePosTmp;
+            }
+            else if(statement.type == TYPE_OP.IMPORT){
+                //do nothing
+            }
+            //pending implementation
+            else if(statement.type == TYPE_OP.CALL){
+
+            }
+            else if(statement.type == TYPE_OP.CALL_JS){
+                
+            }
+            else if(statement.type == TYPE_OP.RETURN){
+
+            }
+            else if(statement.type == TYPE_OP.THROW){
+
+            }
+            else if(statement.type == TYPE_OP.TRY){
+
+            }
+            else{
+                //TODO
+                console.error(statement.type + " aun no ha sido implementado");
+            }
+        }catch(error){
+            _errores.push(error);
         }
     })
 }
 
 function addScope(id, type, padre_id){
     if(type == "Block"){
-        id = id + "_" + (idBlock++)
+        id = id + "_" + (_idBlock++)
     }
     var scope = new Scope(id, type, padre_id);
-    symbolTable.push(scope);
+    _symbolTable.push(scope);
 
     return scope;
 }
 
-let ast;
-
-try {
-    // leemos nuestro archivo de entrada
-    const entrada = fs.readFileSync('../entradas/entrada.txt');
-    // invocamos a nuestro parser con el contendio del archivo de entradas
-    ast = parser.parse(entrada.toString());
-
-    // imrimimos en un archivo el contendio del AST en formato JSON
-    fs.writeFileSync('./ast.json', JSON.stringify(ast));
-} catch (e) {
-    console.error(e);
-    return;
+function parseSource(fileName){
+    let ast = [];
+    try {
+        // leemos nuestro archivo de entrada
+        const entrada = fs.readFileSync(__dirname + '/../entradas/' + fileName);
+        // invocamos a nuestro parser con el contendio del archivo de entradas
+        parsedSource = parser.parse(entrada.toString());
+        ast = parsedSource.ast;
+        _errores = _errores.concat(parsedSource.errores);
+    } catch (e) {
+        console.error(e);
+    }
+    return ast;
 }
-console.log("................................................ parse seems ok");
 
+function compile(){
 
-var symbolTable = [];
-var scope_Global = addScope("_global", "global", null);
+    //parse entry point
+    var ast = parseSource('entrada.txt');
 
-var relativePos = 0;
-var idBlock = 0;
+    //Get import statement and add all funcs to current AST
+    var importStatement = ast.find((statement) => statement.type == TYPE_OP.IMPORT);
+    if(importStatement){
+        importStatement.imports.forEach((fileName) => {
+            parseSource(fileName).filter((globalStatement) => globalStatement.type == TYPE_OP.FUNC_DEF).forEach((func) => {
+                ast.push(func);
+            })
+        })
+    }
 
-buildST(ast, scope_Global, true);
-fs.writeFileSync('./st.json', JSON.stringify(symbolTable));
+    //print AST in json format
+    fs.writeFileSync(__dirname + '/debug/ast.json', JSON.stringify(ast));
+    console.log(_errores);
+
+    var scope_Global = addScope("_global", "_global", null);
+    _relativePos = 0;
+    _idBlock = 0;
+    
+    //navigate AST to add globals (define and global var)
+    collectGlobals(ast, _symbolTable);
+
+    //build symboltable and type-check
+    buildSymbolTable(ast, scope_Global, true);
+
+    //print SymbolTable in json format
+    fs.writeFileSync(__dirname + '/debug/st.json', JSON.stringify(_symbolTable));
+}
+
+var _relativePos = 0;
+var _idBlock = 0;
+var _symbolTable = [];
+var _errores = [];
+
+compile();

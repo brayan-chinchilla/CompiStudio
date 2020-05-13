@@ -1,4 +1,23 @@
-%{var strBuffer = "";%}
+%{
+    var strBuffer = "";
+    const _errores = []
+	const TYPE_OP = require('./util').TYPE_OP;
+	const TYPE_VAL = require('./util').TYPE_VAL;
+	const AST_API = require('./util').AST_API;
+
+    /**
+        parser.parseError = (str, hash) => {
+            _errores.push({type:"SINTAX", detail:`Found: ${hash.token}\nExpected: ${hash.expected}`, line: hash.loc.first_line, column: hash.loc.first_column})
+            if (hash.recoverable) {
+                this.trace(str);
+            } else {
+                var error = new Error(str);
+                error.hash = hash;
+                throw error;
+            }
+        };
+    */
+%}
 
 
 %lex
@@ -84,7 +103,7 @@
 
 "false"                                     return 'LITERAL_BOOLEAN';
 "true"                                      return 'LITERAL_BOOLEAN';
-[0-9]+("."[0-9]+)?  	                    return 'LITERAL_DOUBLE';
+[0-9]+"."[0-9]+     	                    return 'LITERAL_DOUBLE';
 [0-9]+  				                    return 'LITERAL_INT';
 
 \"                                          { strBuffer = ""; this.begin('STRING'); }
@@ -114,15 +133,11 @@
 
 <<EOF>>				                    return 'EOF';
 
-.       { console.error('Error léxico: ' + yytext + ', en la linea: ' + yylloc.first_line + ', en la columna: ' + yylloc.first_column); }
+.   { 
+        _errores.push({type:"LEXICO", detail:`Unknown token '${yytext}'`, line: yylloc.first_line, column: yylloc.first_column});
+    }
 
 /lex
-
-%{
-	const TYPE_OP       	= require('./instructions').TYPE_OP;
-	const TYPE_VAL      	= require('./instructions').TYPE_VAL;
-	const AST_API       	= require('./instructions').AST_API;
-%}
 
 /* Asociación de operadores y precedencia */
 %right  'EQUAL' 'COLONEQUAL'
@@ -148,7 +163,7 @@
 
 ini
     : l_global EOF
-        { return $1; }
+        { return {ast:$1, errores:_errores}; }
 ;
 
 l_global
@@ -160,11 +175,15 @@ l_global
         { $1.push($2); $$ = $1; }
     | global SEMICOLON
         { $$ = [$1]; }
+    | error SEMICOLON
+        { $$ = []; }
+    | l_global error SEMICOLON
+        { /*nothing*/ }
 ;
 
 global
     : R_IMPORT import_list
-        { $$ = {type: TYPE_OP.IMPORT, import: $2 };}
+        { $$ = {type: TYPE_OP.IMPORT, imports: $2, line: @$.first_line, column: @$.first_column}; }
     | funcDeclar
         { $$ = $1; }
     | varDeclar
@@ -175,7 +194,7 @@ global
 
 defineStruct
     : R_DEFINE ID R_AS BRACKET_L l_declar BRACKET_R
-        { $$ = { type: TYPE_OP.DEFINE_STRC, id: $2, l_declar: $5} }
+        { $$ = { type: TYPE_OP.DEFINE_STRC, id: $2, l_declar: $5, line: @$.first_line, column: @$.first_column}; }
 ;
 
 l_declar
@@ -194,13 +213,13 @@ import_list
 
 funcDeclar
     : type ID PAR_L l_param PAR_R BRACE_L l_statement BRACE_R
-        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $1, name: $2, params: $4, block: $7 }; }
+        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $1, name: $2, params: $4, block: $7, line: @$.first_line, column: @$.first_column}; }
     | R_PUBLIC type ID PAR_L l_param PAR_R BRACE_L l_statement BRACE_R
-        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $2, name: $3, params: $5, block: $8 }; }
+        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $2, name: $3, params: $5, block: $8, line: @$.first_line, column: @$.first_column}; }
     | ID ID PAR_L l_param PAR_R BRACE_L l_statement BRACE_R
-        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $1, name: $2, params: $4, block: $7 }; }
+        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $1, name: $2, params: $4, block: $7, line: @$.first_line, column: @$.first_column}; }
     | R_PUBLIC ID ID PAR_L l_param PAR_R BRACE_L l_statement BRACE_R
-        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $2, name: $3, params: $5, block: $8 }; }
+        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $2, name: $3, params: $5, block: $8, line: @$.first_line, column: @$.first_column}; }
 ;
 
 l_param
@@ -219,6 +238,8 @@ l_statement
         { $1.push($2); $$ = $1; }
     |
         { $$ = []; }
+    | l_statement error SEMICOLON
+        { /*nothing*/ }
 ;
 
 statement
@@ -233,43 +254,43 @@ statement
     | if
         { $$ = $1; }
     | R_WHILE PAR_L exp PAR_R BRACE_L l_statement BRACE_R
-        { $$ = {type: TYPE_OP.WHILE, cond: $3, block: $6 }; }
+        { $$ = {type: TYPE_OP.WHILE, cond: $3, block: $6, line: @$.first_line, column: @$.first_column}; }
     | R_DO BRACE_L l_statement BRACE_R R_WHILE PAR_L exp PAR_R
-        { $$ = {type: TYPE_OP.DO_WHILE, block: $3, cond: $7 }; }
+        { $$ = {type: TYPE_OP.DO_WHILE, block: $3, cond: $7, line: @$.first_line, column: @$.first_column}; }
     | R_FOR PAR_L for_init SEMICOLON exp SEMICOLON for_update PAR_R BRACE_L l_statement BRACE_R
-        { $$ = {type: TYPE_OP.FOR, init: $3, cond: $5, update: $7, block: $10 }; }
+        { $$ = {type: TYPE_OP.FOR, init: $3, cond: $5, update: $7, block: $10, line: @$.first_line, column: @$.first_column}; }
     | R_FOR PAR_L for_init SEMICOLON SEMICOLON for_update PAR_R BRACE_L l_statement BRACE_R
-        { $$ = {type: TYPE_OP.FOR, init: $3, cond: null, update: $6, block: $9 }; }
+        { $$ = {type: TYPE_OP.FOR, init: $3, cond: null, update: $6, block: $9, line: @$.first_line, column: @$.first_column}; }
     | R_SWITCH PAR_L exp PAR_R BRACE_L l_case BRACE_R
-        { $$ = {type: TYPE_OP.SWITCH, switch: $3, cases: $6 }; }
+        { $$ = {type: TYPE_OP.SWITCH, switch: $3, cases: $6, line: @$.first_line, column: @$.first_column}; }
     | R_THROW exp
-        { $$ = { type: TYPE_OP.THROW, exp: $2}}
+        { $$ = { type: TYPE_OP.THROW, exp: $2, line: @$.first_line, column: @$.first_column}; }
     | R_TRY BRACE_L l_statement BRACE_R R_CATCH PAR_L ID ID PAR_R BRACE_L l_statement BRACE_R
-        { $$ = {type: TYPE_OP.TRY, tryBlock: $3, exceptionType: $7, catchBlock: $11}; }
+        { $$ = {type: TYPE_OP.TRY, tryBlock: $3, exceptionType: $7, catchBlock: $11, line: @$.first_line, column: @$.first_column}; }
     | exp SEMICOLON
         { $$ = $1 }
 ;
 
 varDeclar
     : type ID EQUAL exp
-        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: $4} }
+        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: $4, line: @$.first_line, column: @$.first_column}; }
     | ID ID EQUAL exp
-        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: $4} }
+        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: $4, line: @$.first_line, column: @$.first_column}; }
     | R_VAR ID COLONEQUAL exp  
-        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: $4} }
+        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: $4, line: @$.first_line, column: @$.first_column}; }
     | R_CONST ID COLONEQUAL exp  
-        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: $4} }
+        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: $4, line: @$.first_line, column: @$.first_column}; }
     | R_GLOBAL ID COLONEQUAL exp  
-        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: $4} }
+        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: $4, line: @$.first_line, column: @$.first_column}; }
     | type ID 
-        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: null} }
+        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: null, line: @$.first_line, column: @$.first_column}; }
     | ID ID 
-        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: null} }
+        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: null, line: @$.first_line, column: @$.first_column}; }
 ;
 
 varAssign
     : exp EQUAL exp
-        { $$ = {type: TYPE_OP.ASSIGN, id:$1, exp: $3} }
+        { $$ = {type: TYPE_OP.ASSIGN, id:$1, exp: $3, line: @$.first_line, column: @$.first_column}; }
 ;
 
 type
@@ -314,27 +335,27 @@ for_update
 
 jump
     : R_CONTINUE
-        { $$ = {type: TYPE_OP.CONTINUE }; }
+        { $$ = {type: TYPE_OP.CONTINUE, line: @$.first_line, column: @$.first_column}; }
     | R_BREAK
-        { $$ = {type: TYPE_OP.BREAK }; }
+        { $$ = {type: TYPE_OP.BREAK, line: @$.first_line, column: @$.first_column}; }
     | R_RETURN SEMICOLON
-        { $$ = {type: TYPE_OP.RETURN, exp: null }; }
+        { $$ = {type: TYPE_OP.RETURN, exp: null, line: @$.first_line, column: @$.first_column}; }
     | R_RETURN exp SEMICOLON
-        { $$ = {type: TYPE_OP.RETURN, exp: $2 }; }
+        { $$ = {type: TYPE_OP.RETURN, exp: $2, line: @$.first_line, column: @$.first_column}; }
 ;
 
 if
     : R_IF PAR_L exp PAR_R BRACE_L l_statement BRACE_R
-        { $$ = {type: TYPE_OP.IF, cond: $3, ifTrue: $6, ifFalse: null }; }
+        { $$ = {type: TYPE_OP.IF, cond: $3, ifTrue: $6, ifFalse: null, line: @$.first_line, column: @$.first_column}; }
     | R_IF PAR_L exp PAR_R BRACE_L l_statement BRACE_R if_else
-        { $$ = {type: TYPE_OP.IF, cond: $3, ifTrue: $6, ifFalse: $8 }; }
+        { $$ = {type: TYPE_OP.IF, cond: $3, ifTrue: $6, ifFalse: $8, line: @$.first_line, column: @$.first_column}; }
 ;
 
 if_else
     : R_ELSE if
         { $$ = $2; }
     | R_ELSE BRACE_L l_statement BRACE_R
-        { $$ = {type: TYPE_OP.IF, cond: null, ifTrue: $3, ifFalse: null }; }
+        { $$ = {type: TYPE_OP.IF, cond: null, ifTrue: $3, ifFalse: null, line: @$.first_line, column: @$.first_column}; }
 ;
 
 l_case
@@ -346,16 +367,16 @@ l_case
 
 case
     : R_CASE exp COLON l_statement
-        { $$ = {type: TYPE_OP.CASE, cond: $2, ifTrue: $4 }; }
+        { $$ = {type: TYPE_OP.CASE, cond: $2, ifTrue: $4, line: @$.first_line, column: @$.first_column}; }
     | R_DEFAULT COLON l_statement
-        { $$ = {type: TYPE_OP.CASE, cond: null, ifTrue: $3 }; }
+        { $$ = {type: TYPE_OP.CASE, cond: null, ifTrue: $3, line: @$.first_line, column: @$.first_column}; }
 ;
 
 call
     : exp PAR_L l_exp PAR_R
-        { $$ = {type:TYPE_OP.CALL, call: $1, params: $3 } }
+        { $$ = {type:TYPE_OP.CALL, call: $1, params: $3, line: @$.first_line, column: @$.first_column}; }
     | exp PAR_L l_assign PAR_R
-        { $$ = {type:TYPE_OP.CALL_JS, call: $1, params: $3 } }
+        { $$ = {type:TYPE_OP.CALL_JS, call: $1, params: $3, line: @$.first_line, column: @$.first_column}; }
 ;
 
 l_assign
@@ -376,12 +397,12 @@ l_exp
 
 access
     : exp BRACKET_L exp BRACKET_R
-        { $$ = {type: TYPE_OP.ACCESS, base: $1, index: $3} }
+        { $$ = {type: TYPE_OP.ACCESS, base: $1, index: $3, line: @$.first_line, column: @$.first_column}; }
 ;
 
 exp
     :  ID
-        { $$ = { type: TYPE_OP.ID, val:$1 }; }
+        { $$ = { type: TYPE_OP.ID, val:$1, line: @$.first_line, column: @$.first_column}; }
     | atomic
         { $$ = $1; }
     | call
@@ -391,9 +412,9 @@ exp
     | exp_logic
         { $$ = $1; }
     | BRACE_L l_exp BRACE_R
-        { $$ = {type: TYPE_OP.ARRAY_DEF, jType: TYPE_VAL.ARRAY, val: $2}; }
+        { $$ = {type: TYPE_OP.ARRAY_DEF, val: $2, line: @$.first_line, column: @$.first_column}; }
     | exp TERNARY exp COLON exp
-        { $$ = {type: TYPE_OP.TERNARY, cond: $1, ifTrue: $3, ifFalse: $5 }; }
+        { $$ = {type: TYPE_OP.TERNARY, cond: $1, ifTrue: $3, ifFalse: $5, line: @$.first_line, column: @$.first_column}; }
     | PAR_L exp PAR_R
         { $$ = $2; }
     | access
@@ -401,79 +422,79 @@ exp
     | update
         { $$ = $1; }
     | exp DOT exp
-        { $$ = {type: TYPE_OP.DOT, base: $1, next: $3} }
+        { $$ = {type: TYPE_OP.DOT, base: $1, next: $3, line: @$.first_line, column: @$.first_column}; }
     | PAR_L primType PAR_R exp
-        { $$ = { type: TYPE_OP.CAST, endType: $2, exp: $4 } }
+        { $$ = { type: TYPE_OP.CAST, endType: $2, exp: $4, line: @$.first_line, column: @$.first_column}; }
     | R_STRC ID BRACKET_L exp BRACKET_R
-        { $$ = { type: TYPE_OP.STRC, jType: $2 + "[]", exp: $4} }
+        { $$ = { type: TYPE_OP.STRC, jType: $2 + "[]", exp: $4, line: @$.first_line, column: @$.first_column}; }
     | R_STRC primType BRACKET_L exp BRACKET_R
-        { $$ = { type: TYPE_OP.STRC, jType: $2 + "[]", exp: $4} }
+        { $$ = { type: TYPE_OP.STRC, jType: $2 + "[]", exp: $4, line: @$.first_line, column: @$.first_column}; }
     | R_STRC ID PAR_L PAR_R
-        { $$ = { type: TYPE_OP.STRC, jType: $2, exp: 1} }
+        { $$ = { type: TYPE_OP.STRC, jType: $2, exp: 1, line: @$.first_line, column: @$.first_column}; }
     | DOLLAR exp
-        { $$ = {type: TYPE_OP.DOLLAR, exp: $2} }
+        { $$ = {type: TYPE_OP.DOLLAR, exp: $2, line: @$.first_line, column: @$.first_column}; }
 ;
 
 update
     : ID PLUSPLUS
-        { $$ = {type: TYPE_OP.PLUSPLUS, op1: $1}; }
+        { $$ = {type: TYPE_OP.PLUSPLUS, op1: { type: TYPE_OP.ID, val:$1, line: @$.first_line, column: @$.first_column}, line: @$.first_line, column: @$.first_column}; }
     | ID MINUSMINUS
-        { $$ = {type: TYPE_OP.MINUSMINUS, op1: $1}; }
+        { $$ = {type: TYPE_OP.MINUSMINUS, op1: { type: TYPE_OP.ID, val:$1, line: @$.first_line, column: @$.first_column}, line: @$.first_line, column: @$.first_column}; }
 ;
 
 exp_arithmetic
     : MINUS exp %prec UMINUS
-        { $$ = {type: TYPE_OP.UMINUS, op1: $2}; }
+        { $$ = {type: TYPE_OP.UMINUS, op1: $2, line: @$.first_line, column: @$.first_column}; }
     | exp PLUS exp
-        { $$ = {type: TYPE_OP.PLUS, op1: $1, op: $2, op2: $3}; }
+        { $$ = {type: TYPE_OP.PLUS, op1: $1, op: $2, op2: $3, line: @$.first_line, column: @$.first_column}; }
     | exp MINUS exp
-        { $$ = {type: TYPE_OP.MINUS, op1: $1, op: $2, op2: $3}; }
+        { $$ = {type: TYPE_OP.MINUS, op1: $1, op: $2, op2: $3, line: @$.first_line, column: @$.first_column}; }
     | exp TIMES exp
-        { $$ = {type: TYPE_OP.TIMES, op1: $1, op: $2, op2: $3}; }
+        { $$ = {type: TYPE_OP.TIMES, op1: $1, op: $2, op2: $3, line: @$.first_line, column: @$.first_column}; }
     | exp DIVIDE exp
-        { $$ = {type: TYPE_OP.DIVIDE, op1: $1, op: $2, op2: $3}; }
+        { $$ = {type: TYPE_OP.DIVIDE, op1: $1, op: $2, op2: $3, line: @$.first_line, column: @$.first_column}; }
     | exp MODULE exp
-        { $$ = {type: TYPE_OP.MODULE, op1: $1, op: $2, op2: $3}; }
+        { $$ = {type: TYPE_OP.MODULE, op1: $1, op: $2, op2: $3, line: @$.first_line, column: @$.first_column}; }
     | exp POW exp
-        { $$ = {type: TYPE_OP.POW, op1: $1, op: $2, op2: $3}; }
+        { $$ = {type: TYPE_OP.POW, op1: $1, op: $2, op2: $3, line: @$.first_line, column: @$.first_column}; }
 ;
 
 exp_logic
     : exp EQUALEQUALEQUAL exp
-        { $$ = {type: TYPE_OP.EQUALEQUALEQUAL, op1: $1, op: $2, op2: $3}; }
+        { $$ = {type: TYPE_OP.EQUALEQUALEQUAL, op1: $1, op: $2, op2: $3, line: @$.first_line, column: @$.first_column}; }
     | exp EQUALEQUAL exp
-        { $$ = {type: TYPE_OP.EQUALEQUAL, op1: $1, op: $2, op2: $3}; }
+        { $$ = {type: TYPE_OP.EQUALEQUAL, op1: $1, op: $2, op2: $3, line: @$.first_line, column: @$.first_column}; }
     | exp NOTEQUAL exp
-        { $$ = {type: TYPE_OP.NOTEQUAL, op1: $1, op: $2, op2: $3}; }
+        { $$ = {type: TYPE_OP.NOTEQUAL, op1: $1, op: $2, op2: $3, line: @$.first_line, column: @$.first_column}; }
     | exp LESS exp
-        { $$ = {type: TYPE_OP.LESS, op1: $1, op: $2, op2: $3}; }
+        { $$ = {type: TYPE_OP.LESS, op1: $1, op: $2, op2: $3, line: @$.first_line, column: @$.first_column}; }
     | exp LESSEQUAL exp
-        { $$ = {type: TYPE_OP.LESSEQUAL, op1: $1, op: $2, op2: $3}; }
+        { $$ = {type: TYPE_OP.LESSEQUAL, op1: $1, op: $2, op2: $3, line: @$.first_line, column: @$.first_column}; }
     | exp GREATER exp
-        { $$ = {type: TYPE_OP.GREATER, op1: $1, op: $2, op2: $3}; }
+        { $$ = {type: TYPE_OP.GREATER, op1: $1, op: $2, op2: $3, line: @$.first_line, column: @$.first_column}; }
     | exp GREATEREQUAL exp
-        { $$ = {type: TYPE_OP.GREATEREQUAL, op1: $1, op: $2, op2: $3}; }
+        { $$ = {type: TYPE_OP.GREATEREQUAL, op1: $1, op: $2, op2: $3, line: @$.first_line, column: @$.first_column}; }
     | exp AND exp
-        { $$ = {type: TYPE_OP.AND, op1: $1, op2: $3}; }
+        { $$ = {type: TYPE_OP.AND, op1: $1, op2: $3, line: @$.first_line, column: @$.first_column}; }
     | exp OR exp
-        { $$ = {type: TYPE_OP.OR, op1: $1, op2: $3}; }
+        { $$ = {type: TYPE_OP.OR, op1: $1, op2: $3, line: @$.first_line, column: @$.first_column}; }
     | exp XOR exp
-        { $$ = {type: TYPE_OP.XOR, op1: $1, op2: $3}; }
+        { $$ = {type: TYPE_OP.XOR, op1: $1, op2: $3, line: @$.first_line, column: @$.first_column}; }
     | NOT exp
-        { $$ = {type: TYPE_OP.NOT, op1: $2}; }
+        { $$ = {type: TYPE_OP.NOT, op1: $2, line: @$.first_line, column: @$.first_column}; }
 ;
 
 atomic
     : LITERAL_INT
-        { $$ = AST_API.newVal(TYPE_VAL.INTEGER, Number($1)); }
+        { $$ = AST_API.newVal(TYPE_VAL.INTEGER, Number($1), @$.first_line, @$.first_column);}
     | LITERAL_DOUBLE
-        { $$ = AST_API.newVal(TYPE_VAL.DOUBLE, Number($1)); }
+        { $$ = AST_API.newVal(TYPE_VAL.DOUBLE, Number($1), @$.first_line, @$.first_column);}
     | LITERAL_BOOLEAN
-        { $$ = AST_API.newVal(TYPE_VAL.BOOLEAN, $1.toLowerCase() == "true" ? 1 : 0 ); }
+        { $$ = AST_API.newVal(TYPE_VAL.BOOLEAN, $1.toLowerCase() == "true" ? 1 : 0, @$.first_line, @$.first_column); }
     | LITERAL_CHAR
-        { $$ = AST_API.newVal(TYPE_VAL.CHAR, $1.charCodeAt(0)); }
+        { $$ = AST_API.newVal(TYPE_VAL.CHAR, $1.charCodeAt(0), @$.first_line, @$.first_column); }
     | LITERAL_STRING
-        { $$ = AST_API.newVal(TYPE_VAL.STRING, $1); }
+        { $$ = AST_API.newVal(TYPE_VAL.STRING, $1, @$.first_line, @$.first_column); }
     | R_NULL
-        { $$ = AST_API.newVal(TYPE_VAL.NULL, -1); }
+        { $$ = AST_API.newVal(TYPE_VAL.NULL, -1, @$.first_line, @$.first_column); }
 ;

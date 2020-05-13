@@ -1,3 +1,5 @@
+var debug = require('./compilation/compile');
+
 var express = require('express');
 var server = express();
 
