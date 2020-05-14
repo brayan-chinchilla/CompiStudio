@@ -15,6 +15,7 @@ module.exports.collectGlobals = function collectGlobals(instructions, symbolTabl
     _globalScope = symbolTable[0];
     _globalPos = 0;
     processInstructions(instructions, true);
+    _globalScope.size = _globalPos;
 }
 
 function addScope(id, type, padre_id){
@@ -34,17 +35,15 @@ function processInstructions(instructions, isGlobal = false){
             //if we're on global scope, then add and mark as ready
             if(isGlobal){
                 var sym = new Symbol(instruction.id, isPrimType(instruction.jType) ? "_global_prim" : "_global_obj", instruction.jType, "_global", 1, _globalPos++);
-                _globalPos++;
                 _globalScope.addSymbol(sym);
             }
             else if(instruction.jType.toLowerCase == "global"){
                 var sym = new Symbol(instruction.id, isPrimType(instruction.jType) ? "_global_prim" : "_global_obj", instruction.jType, "_global", 1, _globalPos++);
-                _globalPos++;
                 _globalScope.addSymbol(sym);
             }
         }
         else if(instruction.type == TYPE_OP.DEFINE_STRC){
-            var newScope = addScope("_obj_" + instruction.id, "_obj_def", null);
+            var newScope = addScope("_obj_" + instruction.id.toUpperCase(), "_obj_def", null);
 
             var relativePos = 0;                    
             //Add all other properties to the scope

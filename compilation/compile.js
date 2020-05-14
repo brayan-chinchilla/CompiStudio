@@ -15,6 +15,8 @@ let getExpType = require('./expTypes').getExpType;
 
 let isPrimType = require('./util').isPrimType;
 
+let gen3D = require('../gen3D/gen3D').gen3D;
+
 function throwError(detail, statement){
     throw {type:"SEMANTIC", detail: detail, line:statement.line, column: statement.column}
 }
@@ -166,6 +168,7 @@ function buildSymbolTable(statements, currentScope, isGlobal){
                 console.error(statement.type + " aun no ha sido implementado");
             }
         }catch(error){
+            console.log(error);
             _errores.push(error);
         }
     })
@@ -196,10 +199,7 @@ function parseSource(fileName){
     return ast;
 }
 
-function compile(){
-
-    //parse entry point
-    var ast = parseSource('entrada.txt');
+function compile(ast){
 
     //Get import statement and add all funcs to current AST
     var importStatement = ast.find((statement) => statement.type == TYPE_OP.IMPORT);
@@ -212,8 +212,7 @@ function compile(){
     }
 
     //print AST in json format
-    fs.writeFileSync(__dirname + '/debug/ast.json', JSON.stringify(ast));
-    console.log(_errores);
+    fs.writeFileSync(__dirname + '/../debug/ast.json', JSON.stringify(ast));
 
     var scope_Global = addScope("_global", "_global", null);
     _relativePos = 0;
@@ -226,7 +225,9 @@ function compile(){
     buildSymbolTable(ast, scope_Global, true);
 
     //print SymbolTable in json format
-    fs.writeFileSync(__dirname + '/debug/st.json', JSON.stringify(_symbolTable));
+    fs.writeFileSync(__dirname + '/../debug/st.json', JSON.stringify(_symbolTable));
+
+    return gen3D(_symbolTable, ast);
 }
 
 var _relativePos = 0;
@@ -234,4 +235,31 @@ var _idBlock = 0;
 var _symbolTable = [];
 var _errores = [];
 
-compile();
+module.exports.compile = (sourceStr) => {
+    _relativePos = 0;
+    _idBlock = 0;
+    _symbolTable = [];
+    _errores = [];
+    try {
+        // invocamos a nuestro parser con el contendio del archivo de entradas
+        var parsedSource = parser.parse(sourceStr);
+        var ast = parsedSource.ast;
+        _errores = _errores.concat(parsedSource.errores);
+
+        var C3D = compile(ast);
+        symbolTableUnified = [];
+        _symbolTable.forEach(scope => {
+            symbolTableUnified = symbolTableUnified.concat(scope.symbols);
+        })
+
+        return {C3D: C3D, errorTable: _errores, symbolTable: symbolTableUnified}
+
+    } catch (e) {
+        console.error(e);
+        symbolTableUnified = [];
+        _symbolTable.forEach(scope => {
+            symbolTableUnified.concat(symbolTableUnified, scope.symbols);
+        })
+        return {C3D: "#error", errorTable: _errores, symbolTable: symbolTableUnified}
+    }
+}

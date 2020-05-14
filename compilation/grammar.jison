@@ -1,6 +1,6 @@
 %{
     var strBuffer = "";
-    const _errores = []
+    var _errores = []
 	const TYPE_OP = require('./util').TYPE_OP;
 	const TYPE_VAL = require('./util').TYPE_VAL;
 	const AST_API = require('./util').AST_API;
@@ -163,7 +163,7 @@
 
 ini
     : l_global EOF
-        { return {ast:$1, errores:_errores}; }
+        { var result = {ast:$1, errores:_errores}; _errores = []; return result; }
 ;
 
 l_global
@@ -194,7 +194,7 @@ global
 
 defineStruct
     : R_DEFINE ID R_AS BRACKET_L l_declar BRACKET_R
-        { $$ = { type: TYPE_OP.DEFINE_STRC, id: $2, l_declar: $5, line: @$.first_line, column: @$.first_column}; }
+        { $$ = { type: TYPE_OP.DEFINE_STRC, id: $2.toUpperCase(), l_declar: $5, line: @$.first_line, column: @$.first_column}; }
 ;
 
 l_declar
@@ -213,13 +213,13 @@ import_list
 
 funcDeclar
     : type ID PAR_L l_param PAR_R BRACE_L l_statement BRACE_R
-        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $1, name: $2, params: $4, block: $7, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $1, name: $2.toUpperCase(), params: $4, block: $7, line: @$.first_line, column: @$.first_column}; }
     | R_PUBLIC type ID PAR_L l_param PAR_R BRACE_L l_statement BRACE_R
-        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $2, name: $3, params: $5, block: $8, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $2, name: $3.toUpperCase(), params: $5, block: $8, line: @$.first_line, column: @$.first_column}; }
     | ID ID PAR_L l_param PAR_R BRACE_L l_statement BRACE_R
-        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $1, name: $2, params: $4, block: $7, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $1.toUpperCase(), name: $2.toUpperCase(), params: $4, block: $7, line: @$.first_line, column: @$.first_column}; }
     | R_PUBLIC ID ID PAR_L l_param PAR_R BRACE_L l_statement BRACE_R
-        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $2, name: $3, params: $5, block: $8, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $2.toUpperCase(), name: $3.toUpperCase(), params: $5, block: $8, line: @$.first_line, column: @$.first_column}; }
 ;
 
 l_param
@@ -273,19 +273,19 @@ statement
 
 varDeclar
     : type ID EQUAL exp
-        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: $4, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2.toUpperCase(), exp: $4, line: @$.first_line, column: @$.first_column}; }
     | ID ID EQUAL exp
-        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: $4, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.DECLAR, jType: $1.toUpperCase(), id: $2.toUpperCase(), exp: $4, line: @$.first_line, column: @$.first_column}; }
     | R_VAR ID COLONEQUAL exp  
-        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: $4, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2.toUpperCase(), exp: $4, line: @$.first_line, column: @$.first_column}; }
     | R_CONST ID COLONEQUAL exp  
-        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: $4, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2.toUpperCase(), exp: $4, line: @$.first_line, column: @$.first_column}; }
     | R_GLOBAL ID COLONEQUAL exp  
-        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: $4, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2.toUpperCase(), exp: $4, line: @$.first_line, column: @$.first_column}; }
     | type ID 
-        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: null, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2.toUpperCase(), exp: null, line: @$.first_line, column: @$.first_column}; }
     | ID ID 
-        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2, exp: null, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.DECLAR, jType: $1.toUpperCase(), id: $2.toUpperCase(), exp: null, line: @$.first_line, column: @$.first_column}; }
 ;
 
 varAssign
@@ -301,7 +301,7 @@ type
     | R_VOID
         { $$ = TYPE_VAL.VOID }
     | ID BRACKET_L BRACKET_R
-        { $$ = $1  + "[]"}
+        { $$ = $1.toUpperCase()  + "[]"}
 ;
 
 primType
@@ -402,7 +402,7 @@ access
 
 exp
     :  ID
-        { $$ = { type: TYPE_OP.ID, val:$1, line: @$.first_line, column: @$.first_column}; }
+        { $$ = { type: TYPE_OP.ID, val:$1.toUpperCase(), line: @$.first_line, column: @$.first_column}; }
     | atomic
         { $$ = $1; }
     | call
@@ -426,20 +426,20 @@ exp
     | PAR_L primType PAR_R exp
         { $$ = { type: TYPE_OP.CAST, endType: $2, exp: $4, line: @$.first_line, column: @$.first_column}; }
     | R_STRC ID BRACKET_L exp BRACKET_R
-        { $$ = { type: TYPE_OP.STRC, jType: $2 + "[]", exp: $4, line: @$.first_line, column: @$.first_column}; }
+        { $$ = { type: TYPE_OP.STRC, jType: $2.toUpperCase() + "[]", exp: $4, line: @$.first_line, column: @$.first_column}; }
     | R_STRC primType BRACKET_L exp BRACKET_R
         { $$ = { type: TYPE_OP.STRC, jType: $2 + "[]", exp: $4, line: @$.first_line, column: @$.first_column}; }
     | R_STRC ID PAR_L PAR_R
-        { $$ = { type: TYPE_OP.STRC, jType: $2, exp: 1, line: @$.first_line, column: @$.first_column}; }
+        { $$ = { type: TYPE_OP.STRC, jType: $2.toUpperCase(), exp: null, line: @$.first_line, column: @$.first_column}; }
     | DOLLAR exp
         { $$ = {type: TYPE_OP.DOLLAR, exp: $2, line: @$.first_line, column: @$.first_column}; }
 ;
 
 update
     : ID PLUSPLUS
-        { $$ = {type: TYPE_OP.PLUSPLUS, op1: { type: TYPE_OP.ID, val:$1, line: @$.first_line, column: @$.first_column}, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.PLUSPLUS, op1: { type: TYPE_OP.ID, val:$1.toUpperCase(), line: @$.first_line, column: @$.first_column}, line: @$.first_line, column: @$.first_column}; }
     | ID MINUSMINUS
-        { $$ = {type: TYPE_OP.MINUSMINUS, op1: { type: TYPE_OP.ID, val:$1, line: @$.first_line, column: @$.first_column}, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.MINUSMINUS, op1: { type: TYPE_OP.ID, val:$1.toUpperCase(), line: @$.first_line, column: @$.first_column}, line: @$.first_line, column: @$.first_column}; }
 ;
 
 exp_arithmetic

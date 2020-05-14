@@ -37,12 +37,12 @@ function isNumeric(type){
 function maxType(type1, type2){
     if(type1 == "STRING" || type2 == "STRING")
         return "STRING";
-    else if(type1 == TYPE_OP.DOUBLE || type2 == TYPE_OP.DOUBLE)
-        return TYPE_OP.DOUBLE;
-    else if(type1 == TYPE_OP.INTEGER || type2 == TYPE_OP.INTEGER)
-        return TYPE_OP.INTEGER;
-    else if(type1 == TYPE_OP.CHAR && type2 == TYPE_OP.CHAR)
-        return TYPE_OP.INTEGER;
+    else if(type1 == TYPE_VAL.DOUBLE || type2 == TYPE_VAL.DOUBLE)
+        return TYPE_VAL.DOUBLE;
+    else if(type1 == TYPE_VAL.INTEGER || type2 == TYPE_VAL.INTEGER)
+        return TYPE_VAL.INTEGER;
+    else if(type1 == TYPE_VAL.CHAR && type2 == TYPE_VAL.CHAR)
+        return TYPE_VAL.INTEGER;
 
     console.error("Unexpected");
 }
@@ -139,7 +139,7 @@ function getType_Update(exp){
     var typeId = getExpType(exp.op1);
 
     if(typeId != TYPE_VAL.INTEGER && typeId != TYPE_VAL.DOUBLE)
-        throwError(`Invalid op -> ${typeId} ${exp.type == TYPE_OP.PLUSPLUS ? '++' : '--'}`, exp);
+        throwError(`Invalid op\n${typeId} ${exp.type == TYPE_OP.PLUSPLUS ? '++' : '--'}`, exp);
 
     return typeId;
 }
@@ -157,7 +157,7 @@ function getType_Strc(exp){
     if(!isPrimType(type) && ! _symbolTable[0].getSymbol(_symbolTable, "_obj_" + type, true))
         throwError(`Unknown type ${exp.jType}`, exp);
 
-    return getExpType();
+    return exp.jType;
 }
 
 function getType_Atomic(exp){
@@ -165,8 +165,8 @@ function getType_Atomic(exp){
 }
 
 function getType_Plus(exp){
-    var type1 = getTypeExp(exp.op1);
-    var type2 = getTypeExp(exp.op2);
+    var type1 = getExpType(exp.op1);
+    var type2 = getExpType(exp.op2);
 
     //If there is a string + anyPrim || char + char
     if(type1.toUpperCase() == "STRING" && isPrimType(type2) || type2.toUpperCase() == "STRING" && isPrimType(type1) || type1 == TYPE_VAL.CHAR && type2 == TYPE_VAL.CHAR)
@@ -181,8 +181,8 @@ function getType_Plus(exp){
 
 //minus and times
 function getType_Arithmetic(exp){
-    var type1 = getTypeExp(exp.op1);
-    var type2 = getTypeExp(exp.op2);
+    var type1 = getExpType(exp.op1);
+    var type2 = getExpType(exp.op2);
 
     if(! isNumeric(type1) || !isNumeric(type2))
         throwErrorOp(type1, type2, exp);
@@ -191,8 +191,8 @@ function getType_Arithmetic(exp){
 }
 
 function getType_Divide(exp){
-    var type1 = getTypeExp(exp.op1);
-    var type2 = getTypeExp(exp.op2);
+    var type1 = getExpType(exp.op1);
+    var type2 = getExpType(exp.op2);
 
     if(! isNumeric(type1) || !isNumeric(type2))
         throwErrorOp(type1, type2, exp);
@@ -202,8 +202,8 @@ function getType_Divide(exp){
 
 //pow and module
 function getType_Arithmetic_StrictInteger(exp){
-    var type1 = getTypeExp(exp.op1);
-    var type2 = getTypeExp(exp.op2);
+    var type1 = getExpType(exp.op1);
+    var type2 = getExpType(exp.op2);
 
     if(type1 != TYPE_VAL.INTEGER || type2 != TYPE_VAL.INTEGER)
         throwErrorOp(type1, type2, exp);
@@ -212,7 +212,7 @@ function getType_Arithmetic_StrictInteger(exp){
 }
 
 function getType_Uminus(exp){
-    var type1 = getTypeExp(exp.op1);
+    var type1 = getExpType(exp.op1);
     if(type1 != TYPE_VAL.INTEGER || type1 != TYPE_VAL.DOUBLE)
         throwErrorOp(type1, null, exp);
     
@@ -220,8 +220,8 @@ function getType_Uminus(exp){
 }
 
 function getType_Relational(exp){
-    var type1 = getTypeExp(exp.op1);
-    var type2 = getTypeExp(exp.op2);
+    var type1 = getExpType(exp.op1);
+    var type2 = getExpType(exp.op2);
 
     if(! isNumeric(type1) || !isNumeric(type2))
         throwErrorOp(type1, type2, exp);
@@ -231,8 +231,8 @@ function getType_Relational(exp){
 
 //and, or, xor
 function getType_Logic(exp){
-    var type1 = getTypeExp(exp.op1);
-    var type2 = getTypeExp(exp.op2);
+    var type1 = getExpType(exp.op1);
+    var type2 = getExpType(exp.op2);
 
     if(type1 != TYPE_VAL.BOOLEAN || type2 != TYPE_VAL.BOOLEAN)
         throwErrorOp(type1, type2, exp);
@@ -241,7 +241,7 @@ function getType_Logic(exp){
 }
 
 function getType_Not(exp){
-    var type1 = getTypeExp(exp.op1);
+    var type1 = getExpType(exp.op1);
     if(type1 != TYPE_VAL.BOOLEAN)
         throwErrorOp(type1, null, exp);
     
@@ -249,8 +249,8 @@ function getType_Not(exp){
 }
 
 function getType_EqualVal(exp){
-    var type1 = getTypeExp(exp.op1);
-    var type2 = getTypeExp(exp.op2);
+    var type1 = getExpType(exp.op1);
+    var type2 = getExpType(exp.op2);
 
     //String == String || boolean == boolean || numeric == numeric
     if(type1 == "STRING" && type1 != "STRING" || type1 == TYPE_VAL.BOOLEAN && type2 == TYPE_VAL.BOOLEAN || isNumeric(type1) && isNumeric(type2))
@@ -260,8 +260,8 @@ function getType_EqualVal(exp){
 }
 
 function getType_EqualRef(exp){
-    var type1 = getTypeExp(exp.op1);
-    var type2 = getTypeExp(exp.op2);
+    var type1 = getExpType(exp.op1);
+    var type2 = getExpType(exp.op2);
 
     //fail if prim or types are not the same
     if(isPrimType(type1) || isPrimType(type2) || type1 != type2)
@@ -271,7 +271,7 @@ function getType_EqualRef(exp){
 }
 
 function getType_Cast(exp){
-    var type1 = getTypeExp(exp.exp);
+    var type1 = getExpType(exp.exp);
     if(! isNumeric(exp.endType) || ! isNumeric(type1))
         throwError(`Invalid cast\n(${endType})${type1}`, exp)
 
@@ -279,9 +279,9 @@ function getType_Cast(exp){
 }
 
 function getType_Ternary(exp){
-    var condType = getTypeExp(exp.cond);
-    var expType1 = getTypeExp(exp.ifTrue);
-    var expType2 = getTypeExp(exp.ifFalse);
+    var condType = getExpType(exp.cond);
+    var expType1 = getExpType(exp.ifTrue);
+    var expType2 = getExpType(exp.ifFalse);
 
     if(condType != TYPE_VAL.BOOLEAN)
         throwError(`Expected: cond\nFound: ${condType}`, exp)
@@ -292,7 +292,7 @@ function getType_Ternary(exp){
 }
 
 function getType_Dollar(exp){
-    var expType = getTypeExp(expType);
+    var expType = getExpType(expType);
     if(isPrimType(expType))
         throwError(`Invalid op\n$ ${expType}`, exp)
 

@@ -1,4 +1,4 @@
-var debug = require('./compilation/compile');
+let compile = require('./compilation/compile').compile;
 
 var express = require('express');
 var server = express();
@@ -11,10 +11,7 @@ server.get('/', function(req, res){
 })
 
 server.post('/compile', function(req, res){
-    console.log(req.body.sourceCode);
-    res.send({
-        C3D: "Codigo 3D"
-    });
+    res.send(compile(req.body.sourceCode));
 })
 
 server.post('/optimize', function(req, res){

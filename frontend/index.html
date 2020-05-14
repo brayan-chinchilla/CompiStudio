@@ -84,54 +84,58 @@
 					<li class="nav-item">
 						<a class="nav-link" id="error-report-tab" data-toggle="tab" role="tab" href="#error-report"
 							aria-controls="error-report" aria-selected="false">Error Report</a>
-					</li>
-					<li class="nav-item active">
-						<a class="nav-link" id="console-tab" data-toggle="tab" role="tab" href="#console"
-							aria-controls="console" aria-selected="false">Console</a>
-					</li>
+					</li>		
 					<li class="nav-item">
 						<a class="nav-link" id="ast-tab" data-toggle="tab" role="tab" href="#ast" aria-controls="ast"
 							aria-selected="false">AST</a>
 					</li>
+					<li class="nav-item">
+						<a class="nav-link" id="optimization-report-tab" data-toggle="tab" role="tab" href="#optimization-report"
+							aria-controls="console" aria-selected="false">Optimization</a>
+					</li>
+					<li class="nav-item active">
+						<a class="nav-link active" id="console-tab" data-toggle="tab" role="tab" href="#console"
+							aria-controls="console" aria-selected="false">Console</a>
+					</li>
 				</ul>
 				<div class="tab-content" id="myTabContent">
-					<div class="tab-pane fade" id="symbol-table" role="tabpanel"
-						aria-labelledby="symbol-table-tab">
-					
+					<div class="tab-pane fade" id="symbol-table" role="tabpanel" aria-labelledby="symbol-table-tab">
 						<table id="table_SymbolTable" class="table-hover">
 							<thead>
 								<tr>
-									<th>Name</th>
-									<th>Position</th>
-									<th>Office</th>
-									<th>Age</th>
-									<th>Start date</th>
-									<th>Salary</th>
+									<th>Id</th>
+									<th>Type</th>
+									<th>jType</th>
+									<th>Scope</th>
+									<th>Size</th>
+									<th>Pos</th>
 								</tr>
 							</thead>
-							<tbody>
-								<tr>
-									<td>Michael Bruce</td>
-									<td>Javascript Developer</td>
-									<td>Singapore</td>
-									<td>29</td>
-									<td>2011/06/27</td>
-									<td>$183,000</td>
-								</tr>
-								<tr>
-									<td>Donna Snider</td>
-									<td>Customer Support</td>
-									<td>New York</td>
-									<td>27</td>
-									<td>2011/01/25</td>
-									<td>$112,000</td>
-								</tr>
-							</tbody>
 						</table>
-					
-					
 					</div>
-					<div class="tab-pane fade" id="error-report" role="tabpanel" aria-labelledby="error-report-tab">b
+					<div class="tab-pane fade" id="error-report" role="tabpanel" aria-labelledby="error-report-tab">
+						<table id="table_ErrorTable" class="table-hover">
+							<thead>
+								<tr>
+									<th>Type</th>
+									<th>Detail</th>
+									<th>Line</th>
+									<th>Column</th>
+								</tr>
+							</thead>
+						</table>
+					</div>
+					<div class="tab-pane fade" id="optimization-report" role="tabpanel" aria-labelledby="optimization-report-tab">
+						<table id="table_OptimizationTable" class="table-hover">
+							<thead>
+								<tr>
+									<th>Original</th>
+									<th>Optimized</th>
+									<th>Rule Applied</th>
+									<th>Line</th>
+								</tr>
+							</thead>
+						</table>
 					</div>
 					<div class="tab-pane fade show active" id="console" role="tabpanel" aria-labelledby="console-tab">
 						<textarea style="width: 100%; height:100%;" id="console_Editor"></textarea>
@@ -167,6 +171,54 @@
 	<script src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js"></script>
 
 	<script src="controller.js"></script>
+
+	<!-----------------------------------EXECUTION-------------------------------------------------------->
+	<script src="Analisis3D/3DColine/AST.js">    </script>
+    <script src="Analisis3D/3DColine/Nodo3D.js">    </script>
+    <script src="Analisis3D/3DColine/Expresion/Expresion.js">    </script>
+    <script src="Analisis3D/3DColine/Expresion/Operacion/Aritmetico.js">    </script>
+    <script src="Analisis3D/3DColine/Expresion/Operacion/Relacional.js">    </script>
+    <script src="Analisis3D/3DColine/Expresion/ValorImplicito/AccesoHeap.js">    </script>
+    <script src="Analisis3D/3DColine/Expresion/ValorImplicito/AccesoStack.js">    </script>
+    <script src="Analisis3D/3DColine/Expresion/ValorImplicito/AccesoVariable.js">    </script>
+    <script src="Analisis3D/3DColine/Expresion/ValorImplicito/DatoPrimitivo.js">    </script>
+
+    <script src="Analisis3D/3DColine/Instruccion/Instruccion.js">    </script>
+    <script src="Analisis3D/3DColine/Instruccion/Asignacion/Asignacion.js">    </script>
+    <script src="Analisis3D/3DColine/Instruccion/Asignacion/AsignacionHeap.js">    </script>
+    <script src="Analisis3D/3DColine/Instruccion/Asignacion/AsignacionStack.js">    </script>
+
+    <script src="Analisis3D/3DColine/Instruccion/Condicionales/CallStatement.js">    </script>
+    <script src="Analisis3D/3DColine/Instruccion/Condicionales/GoToStatement.js">    </script>    
+    <script src="Analisis3D/3DColine/Instruccion/Condicionales/IfStatement.js">    </script>
+
+    <script src="Analisis3D/3DColine/Instruccion/Declaraciones/DeclaracionConValor.js">    </script>
+    <script src="Analisis3D/3DColine/Instruccion/Declaraciones/DeclaracionEstructuras.js">    </script>
+    <script src="Analisis3D/3DColine/Instruccion/Declaraciones/DeclaracionEtiqueta.js"></script>
+    <script src="Analisis3D/3DColine/Instruccion/Declaraciones/DeclaracionFuncion.js"></script>
+    <script src="Analisis3D/3DColine/Instruccion/Declaraciones/DeclaracionTemporal.js"></script>
+
+    <script src="Analisis3D/3DColine/Instruccion/SentenciasGenerales/End.js"></script>
+    <script src="Analisis3D/3DColine/Instruccion/SentenciasGenerales/Imprimir.js"></script>
+
+    <script src="Analisis3D/Entorno/Simbolos/S_Etiqueta.js"></script>
+    <script src="Analisis3D/Entorno/Simbolos/S_Funcion.js"></script>
+    <script src="Analisis3D/Entorno/Simbolos/S_Heap.js"></script>
+    <script src="Analisis3D/Entorno/Simbolos/S_Stack.js"></script>
+    <script src="Analisis3D/Entorno/Simbolos/S_Variable.js"></script>
+
+    <script src="Analisis3D/Entorno/Entorno.js"></script>
+    <script src="Analisis3D/Entorno/NodoError.js"></script>
+    <script src="Analisis3D/Entorno/Simbolo.js"></script>   
+
+    <script src="Analisis3D/Estructuras/ErrorResult.js"></script>
+    <script src="Analisis3D/Estructuras/Lista.js"></script>
+    <script src="Analisis3D/Estructuras/TablaLineal.js"></script>
+    <script src="Analisis3D/Estructuras/Nodo.js"></script>
+    <script src="Analisis3D/Estructuras/StringBuilder.js"></script>
+    <script src="Analisis3D/Estructuras/NodoRetorno.js"></script>
+
+    <script src="Analisis3D/Analisis/Analyzer.js"></script>
 </body>
 
 </html>

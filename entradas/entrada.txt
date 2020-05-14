@@ -1,9 +1,11 @@
-define Estudiante as [integer nombre, integer clave]
+define Estudiante as [String nombre = "aaa", integer clave]
+
+global a := 5 + 2 * 10;
+var abc := "bbb";
 
 integer calcula(integer a, integer b){
     if(!true){
-        integer c = 5;
+        integer c = 7;
     }
     Estudiante e = strc Estudiante();
 } 
-
