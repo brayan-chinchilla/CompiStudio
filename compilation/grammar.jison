@@ -103,12 +103,12 @@
 
 "false"                                     return 'LITERAL_BOOLEAN';
 "true"                                      return 'LITERAL_BOOLEAN';
-[0-9]+"."[0-9]+     	                    return 'LITERAL_DOUBLE';
+[0-9]+"."[0-9]*     	                    return 'LITERAL_DOUBLE';
 [0-9]+  				                    return 'LITERAL_INT';
 
 \"                                          { strBuffer = ""; this.begin('STRING'); }
 \'                                          { this.begin('CHAR'); }
-([a-zA-Z])[a-zA-ZñÑ0-9_]*".js"	            return 'FILENAME';
+([a-zA-Z])[a-zA-ZñÑ0-9_.]*".js"	            return 'FILENAME';
 ([a-zA-Z])[a-zA-ZñÑ0-9_]*	                return 'ID';
 
 

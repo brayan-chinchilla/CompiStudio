@@ -35,8 +35,8 @@
 						<input id="fileInput" type="file" style="display:none;"/>
 						<a class="dropdown-item" href="#" onclick="document.getElementById('fileInput').click();">Open File</a>
 						<a id="newFileMenu" class="dropdown-item" href="#">New File</a>
-						<a class="dropdown-item" href="#">Save File</a>
-						<a class="dropdown-item" href="#">Save As...</a>
+						<a class="dropdown-item" href="#" onclick="saveFile();">Save File</a>
+						<a class="dropdown-item" href="#" onclick="saveFile();">Save As...</a>
 					</div>
 				</li>
 				<li class="nav-item">
@@ -50,6 +50,16 @@
 						Execute&nbsp
 						<i class="fa fa-play-circle" style="color:green"></i>
 					</a>
+				</li>
+				<li class="nav-item dropdown">
+					<a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown"
+						aria-haspopup="true" aria-expanded="false">
+						Reports
+					</a>
+					<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+						<a id="AST" class="dropdown-item" href="#">AST</a>
+						<a id="BasicBlocks" class="dropdown-item" href="#">Basic Blocks</a>
+					</div>
 				</li>
 			</ul>
 		</div>
@@ -77,28 +87,28 @@
 		<div class="row h-50 no-gutters">
 			<div class="col-lg-8 h-100">
 				<ul class="nav nav-tabs" id="myTab" role="tablist">
+					<li class="nav-item active">
+						<a class="nav-link active" id="console-tab" data-toggle="tab" role="tab" href="#console"
+							aria-controls="console" aria-selected="true">Console</a>
+					</li>
 					<li class="nav-item">
-						<a class="nav-link" id="symbol-table-tab" data-toggle="tab" role="tab"
-							href="#symbol-table" aria-controls="symbol-table" aria-selected="true">Symbol Table</a>
+						<a class="nav-link" id="symbol-table-tab" data-toggle="tab" role="tab" href="#symbol-table"
+							aria-controls="symbol-table" aria-selected="false">Symbol Table</a>
 					</li>
 					<li class="nav-item">
 						<a class="nav-link" id="error-report-tab" data-toggle="tab" role="tab" href="#error-report"
 							aria-controls="error-report" aria-selected="false">Error Report</a>
 					</li>		
 					<li class="nav-item">
-						<a class="nav-link" id="ast-tab" data-toggle="tab" role="tab" href="#ast" aria-controls="ast"
-							aria-selected="false">AST</a>
-					</li>
-					<li class="nav-item">
 						<a class="nav-link" id="optimization-report-tab" data-toggle="tab" role="tab" href="#optimization-report"
-							aria-controls="console" aria-selected="false">Optimization</a>
-					</li>
-					<li class="nav-item active">
-						<a class="nav-link active" id="console-tab" data-toggle="tab" role="tab" href="#console"
-							aria-controls="console" aria-selected="false">Console</a>
+							aria-controls="optimization-report" aria-selected="false">Optimization</a>
 					</li>
 				</ul>
-				<div class="tab-content" id="myTabContent">
+				<div style="height:3%"></div>
+				<div style="height:85%" class="tab-content" id="myTabContent">
+					<div style="height:100%" class="tab-pane fade show active" id="console" role="tabpanel" aria-labelledby="console-tab">
+						<textarea style="width: 100%; height:100%;" id="console_Editor"></textarea>
+					</div>
 					<div class="tab-pane fade" id="symbol-table" role="tabpanel" aria-labelledby="symbol-table-tab">
 						<table id="table_SymbolTable" class="table-hover">
 							<thead>
@@ -137,17 +147,31 @@
 							</thead>
 						</table>
 					</div>
-					<div class="tab-pane fade show active" id="console" role="tabpanel" aria-labelledby="console-tab">
-						<textarea style="width: 100%; height:100%;" id="console_Editor"></textarea>
-					</div>
-					<div class="tab-pane fade" id="ast" role="tabpanel" aria-labelledby="ast-tab">d</div>
 				</div>
 			</div>
 			<div class="col-lg-4">
 				<div class="row h-100 no-gutters">
 					<div class="col-lg-6 border-secondary border-left border-right">
+						<h5 class="text-center my-auto" style="height:13%">Heap</h5>
+						<table id="heap" class="table-hover">
+							<thead>
+								<tr>
+									<th>Pos</th>
+									<th>Val</th>
+									<th>ASCII</th>
+								</tr>
+							</thead>
+						</table>
 					</div>
 					<div class="col-lg-6">
+						<h5 class="text-center my-auto" style="height:13%">Stack</h5>
+						<table id="stack" class="table-hover">
+							<thead>
+								<th>Pos</th>
+								<th>Val</th>
+								<th>ASCII</th>
+							</thead>
+						</table>
 					</div>
 				</div>
 			</div>
@@ -170,6 +194,7 @@
 
 	<script src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js"></script>
 
+	<script type="text/javascript" src="http://webgraphviz.com/viz.js"></script>
 	<script src="controller.js"></script>
 
 	<!-----------------------------------EXECUTION-------------------------------------------------------->

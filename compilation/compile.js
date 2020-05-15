@@ -16,6 +16,7 @@ let getExpType = require('./expTypes').getExpType;
 let isPrimType = require('./util').isPrimType;
 
 let gen3D = require('../gen3D/gen3D').gen3D;
+let genDOT_AST = require('../genDOT_AST').genDOT_AST;
 
 function throwError(detail, statement){
     throw {type:"SEMANTIC", detail: detail, line:statement.line, column: statement.column}
@@ -247,12 +248,14 @@ module.exports.compile = (sourceStr) => {
         _errores = _errores.concat(parsedSource.errores);
 
         var C3D = compile(ast);
+        
+        //prepare symbolTable for report
         symbolTableUnified = [];
         _symbolTable.forEach(scope => {
             symbolTableUnified = symbolTableUnified.concat(scope.symbols);
         })
 
-        return {C3D: C3D, errorTable: _errores, symbolTable: symbolTableUnified}
+        return {C3D: C3D, errorTable: _errores, symbolTable: symbolTableUnified, ast: genDOT_AST(ast)}
 
     } catch (e) {
         console.error(e);
@@ -260,6 +263,6 @@ module.exports.compile = (sourceStr) => {
         _symbolTable.forEach(scope => {
             symbolTableUnified.concat(symbolTableUnified, scope.symbols);
         })
-        return {C3D: "#error", errorTable: _errores, symbolTable: symbolTableUnified}
+        return {C3D: "#error", errorTable: _errores, symbolTable: symbolTableUnified, ast: "digraph ast{}"}
     }
 }

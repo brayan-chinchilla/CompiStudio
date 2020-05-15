@@ -1,4 +1,5 @@
 let compile = require('./compilation/compile').compile;
+let optimize = require('./optimization/optimize').optimize;
 
 var express = require('express');
 var server = express();
@@ -15,17 +16,7 @@ server.post('/compile', function(req, res){
 })
 
 server.post('/optimize', function(req, res){
-    console.log(req.body.C3D);
-    res.send({
-        C3D_Optimizado: "Optimizado"
-    })
-})
-
-server.post('/execute', function(req, res){
-    console.log(req.body.C3D);
-    res.send({
-        console: "Consola"
-    })
+    res.send(optimize(req.body.C3D));
 })
 
 server.listen(8000);

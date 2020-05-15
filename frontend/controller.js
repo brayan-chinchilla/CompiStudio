@@ -1,4 +1,3 @@
-var cs_symbolTable;
 var cs_C3D_Editor;
 var cs_C3D_Optimizado_Editor;
 var cs_consoleEditor;
@@ -26,17 +25,17 @@ function initStaticEditors(){
   cs_C3D_Optimizado_Editor.refresh();
 }
 
-function initSymbolTable(data){
-  cs_symbolTable = $('#table_SymbolTable').DataTable({
+function initSymbolTable(){
+  $('#table_SymbolTable').DataTable({
     info: false,
     paging: false,
+    searching: false,
     scrollY: '30vh',
     fixedHeader: {
       header: true,
       footer: false
     },
     order: [],
-    data: data,
     columns: [
       {data: 'id'},
       {data: 'type'},
@@ -49,17 +48,17 @@ function initSymbolTable(data){
   });
 }
 
-function initErrorTable(data){
-  cs_symbolTable = $('#table_ErrorTable').DataTable({
+function initErrorTable(){
+  $('#table_ErrorTable').DataTable({
     info: false,
     paging: false,
+    searching: false,
     scrollY: '30vh',
     fixedHeader: {
       header: true,
       footer: false
     },
     order: [],
-    data: data,
     columns: [
       {data: 'type'},
       {data: 'detail'},
@@ -70,17 +69,17 @@ function initErrorTable(data){
   });
 }
 
-function initOptimizationTable(data){
-  cs_symbolTable = $('#table_OptimizationTable').DataTable({
+function initOptimizationTable(){
+  $('#table_OptimizationTable').DataTable({
     info: false,
     paging: false,
+    searching: false,
     scrollY: '30vh',
     fixedHeader: {
       header: true,
       footer: false
     },
     order: [],
-    data: data,
     columns: [
       {data: 'original'},
       {data: 'optimized'},
@@ -91,12 +90,52 @@ function initOptimizationTable(data){
   });
 }
 
+function initHeapAndStack(){
+  var options = {
+    info: false,
+    paging: false,
+    searching: false,
+    scrollY: '30vh',
+    fixedHeader: {
+      header: true,
+      footer: false
+    },
+    order: [],
+    columns: [
+      {data: 'pos'},
+      {data: 'val'},
+      {data: 'ascii'}
+    ]
+  }
+
+  $("#heap").DataTable(options);
+  $("#stack").DataTable(options);
+}
+
 $( function() {
   initStaticEditors();
   initEditorTabs();
-  initSymbolTable([]);
-  initErrorTable([]);
-  initOptimizationTable([]);
+  initSymbolTable();
+  initErrorTable();
+  initOptimizationTable();
+  initHeapAndStack();
+
+  $('#myTab').on('shown.bs.tab', (e) => {
+    switch(e.target.id){
+      case "symbol-table-tab":
+        $('#table_SymbolTable').DataTable().draw();
+        break;
+      case "error-report-tab":
+        $('#table_ErrorTable').DataTable().draw();
+        break;
+      case "optimization-report-tab":
+        $('#table_OptimizationTable').DataTable().draw();
+        break;
+      case "console-tab":
+        cs_consoleEditor.refresh();
+        break;
+    }
+  })
 } );
 
 function initEditorTabs(){
@@ -176,19 +215,44 @@ function compile(){
   var editor = $("#" + editorId).data('CodeMirrorInstance');
 
   httpPost('/compile', {sourceCode: editor.getValue()}, (response) => {
-    cs_C3D_Editor.setValue(response.C3D);
-
+    //AST
+    var element = Viz(response.ast, "svg");
+		var DOMURL = window.URL || window.webkitURL || window;
+		var svgBlob = new Blob([element], {type: 'image/svg+xml;charset=utf-8'});
+		var url = DOMURL.createObjectURL(svgBlob);	
+    $('#AST').attr('href', url);
+    
+    //symbolTable
     $('#table_SymbolTable').DataTable().clear().rows.add(response.symbolTable).draw();
 
+    //errorTable
     response.errorTable.forEach(e => {
       e.detail = e.detail.split("\n").join("<br>")
     })
     $('#table_ErrorTable').DataTable().clear().rows.add(response.errorTable).draw();
+
+    //3D Code
+    cs_C3D_Editor.setValue(response.C3D);
+
+    //Show tabs
+    if(response.errorTable.length == 0){
+      $('#symbol-table-tab').tab('show')
+    }
+    else{
+      alert("Errors found during compilation, see report")
+      $('#error-report-tab').tab('show')
+    }
   })
 }
 
 function optimize(){
   httpPost('/optimize', {C3D: cs_C3D_Editor.getValue()}, (response) => {
+    if(response.errorMessage != null){
+      alert(response.errorMessage);
+      $('#optimization-table-tab').tab('show')
+      return;
+    }
+
     cs_C3D_Optimizado_Editor.setValue(response.C3D_Optimizado)
 
     response.report.forEach(entry => {
@@ -197,14 +261,11 @@ function optimize(){
     })
 
     $('#table_OptimizationTable').DataTable().clear().rows.add(response.report).draw();
+    $('#optimization-report-tab').tab('show')
   })
 }
 
 function execute(){
-  //httpPost('/execute', {C3D: cs_C3D_Editor.getValue()}, (response) => {
-    //cs_consoleEditor.setValue(response.console);
-  //})
-
 
   try {
     var res = Analyzer.parse(cs_C3D_Editor.getValue());
@@ -212,15 +273,39 @@ function execute(){
         let resNode = res.execute();
         if (resNode != null) {
           cs_consoleEditor.setValue(resNode.getSalida());
-          //document.getElementById("stack").innerHTML = resNode.getStackAsTable();
-          //document.getElementById("heap").innerHTML = resNode.getHeapAsTable();
+
+          $("#heap").DataTable().clear().rows.add(getTableAsArray(resNode.getHeapAsTable())).draw();
+          $("#stack").DataTable().clear().rows.add(getTableAsArray(resNode.getStackAsTable())).draw();
         }else{
           cs_consoleEditor.setValue('Error no recuperable. Revise su archivo o coloque su duda en canvas');
         }
     }
   } catch (error) {
     cs_consoleEditor.setValue(error.message);
+  } finally {
+    $('#console-tab').tab('show')
   }
+}
+
+function getTableAsArray(htmlString){
+  var table = document.createElement("table")
+  table.innerHTML = htmlString;
+
+  var result = [];
+  var rows = table.rows;
+
+  for(var i = 1; i < rows.length; i++){
+    valAsNum = Number(rows[i].cells[1].textContent);
+    var entry = {
+      pos: rows[i].cells[0].textContent,
+      val: rows[i].cells[1].textContent,
+      ascii: valAsNum >= 32 && valAsNum <= 126 ? "'" + String.fromCharCode(valAsNum) + "'" : ""
+    }
+
+    result.push(entry);
+  }
+
+  return result;
 }
 
 function httpPost(url, obj, callback){
@@ -237,4 +322,31 @@ function httpPost(url, obj, callback){
     }
   }
   http.send(JSON.stringify(obj));
+}
+
+function saveFile() {
+  var focusedTab =  $( "#tabs" ).tabs( "option", "active" ) + 1;
+  var editorId = "jEditor_" + $("#tabs").find(`.ui-tabs-nav > li:nth-child(${focusedTab})`).attr('aria-controls');  
+  var editor = $("#" + editorId).data('CodeMirrorInstance');
+
+  var textToWrite = editor.getValue();
+  var textFileAsBlob = new Blob([textToWrite], { type: 'text/plain' });
+
+  var downloadLink = document.createElement("a");
+  downloadLink.download = "file.j";
+  downloadLink.innerHTML = "Descargar Archivo";
+  if (window.webkitURL != null) {
+      // Chrome allows the link to be clicked
+      // without actually adding it to the DOM.
+      downloadLink.href = window.webkitURL.createObjectURL(textFileAsBlob);
+  }
+  else {
+      // Firefox requires the link to be added to the DOM
+      // before it can be clicked.
+      downloadLink.href = window.URL.createObjectURL(textFileAsBlob);
+      downloadLink.onclick = destroyClickedElement;
+      downloadLink.style.display = "none";
+      document.body.appendChild(downloadLink);
+  }
+  downloadLink.click();
 }
