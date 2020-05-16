@@ -69,11 +69,14 @@ function buildString(result){
 
 function optimizeRule1(mirilla){
     for(var i = 0; i < mirilla.length; i++){
+        //check if current line is plain assignment x = y
         if(mirilla[i].type == TYPE_OP.ASSIGN && mirilla[i].op == null){
             var target = mirilla[i].target.val;
             var assignment = mirilla[i].op1.val;
 
+            //loop from i to end of mirilla
             for(var lookup = i + 1; lookup < mirilla.length; lookup++){
+                //if line is plain assignment y = x
                 if(mirilla[lookup].type == TYPE_OP.ASSIGN && mirilla[lookup].op == null && mirilla[lookup].target.val == assignment && mirilla[lookup].op1.val == target){
                     _report.push({
                         original: [mirilla[i].target.val, '=', mirilla[i].op1.val, '\n', mirilla[lookup].target.val, '=', mirilla[lookup].op1.val].join(" "),
@@ -84,14 +87,14 @@ function optimizeRule1(mirilla){
                     mirilla.splice(lookup, 1);
                     break;
                 }
-                //if tmp is used or data_structure is modified
+                //if tmp is used or data_structure is modified break
                 else if(mirilla[lookup].type == TYPE_OP.ASSIGN){
                     if(mirilla[lookup].target.val == target || mirilla[lookup].target.val == assignment)
                         break;
                     if(mirilla[i].target.type == TYPE_OP.DS && mirilla[lookup].target.type == TYPE_OP.DS)
                         break;
                 }
-                //if there is flow-interrupt
+                //if there is flow-interrupt break
                 else if(mirilla[lookup].type == TYPE_OP.LABEL || mirilla[lookup].type == TYPE_OP.CALL){
                     break;
                 }
@@ -102,14 +105,18 @@ function optimizeRule1(mirilla){
 
 function optimizeRule2(mirilla){
     for(var i = 0; i < mirilla.length; i++){
+        //check if i is goto
         if(mirilla[i].type == TYPE_OP.GOTO){
             var destinyLabel = mirilla[i].label;
 
+            //loop from i to end of mirilla
             for(var lookup = i + 1; lookup < mirilla.length; lookup++){
                 if(mirilla[lookup].type == TYPE_OP.LABEL){
+                    //if different label break
                     if(mirilla[lookup].label != destinyLabel){
                         break
                     }
+                    //if label is goto target
                     else {
                         _report.push({
                             original: buildString(mirilla.slice(i, lookup + 1)),
@@ -131,6 +138,7 @@ function evaluateConstantIf(cond){
     var constant1 = Number(cond.op1.val);
     var constant2 = Number(cond.op2.val);
 
+    //evaluate constant
     switch(cond.op){
         case "==":
             return constant1 == constant2
@@ -149,8 +157,11 @@ function evaluateConstantIf(cond){
 
 function optimizeRule4(mirilla){
     for(var i = 0; i < mirilla.length; i++){
+        //if line if IF
         if(mirilla[i].type == TYPE_OP.IF){
+            //if operands are constants and result is always true
             if(mirilla[i].cond.op1.type == TYPE_OP.NUM && mirilla[i].cond.op2.type == TYPE_OP.NUM && evaluateConstantIf(mirilla[i].cond)){
+                //if goto follows
                 if(i < mirilla.length - 1 && mirilla[i + 1].type == TYPE_OP.GOTO){
                     _report.push({
                         original: buildString(mirilla.slice(i, i + 2)),
@@ -160,6 +171,7 @@ function optimizeRule4(mirilla){
                     })
                     mirilla.splice(i, 2, {type: TYPE_OP.GOTO, label: mirilla[i].label, line: mirilla[i].line})
                 }
+                //if goto does not follow
                 else{
                     _report.push({
                         original: buildString([mirilla[i]]),
@@ -176,7 +188,9 @@ function optimizeRule4(mirilla){
 
 function optimizeRule5(mirilla){
     for(var i = 0; i < mirilla.length; i++){
+        //if line is IF
         if(mirilla[i].type == TYPE_OP.IF){
+            //if operands are constants and result is always false
             if(mirilla[i].cond.op1.type == TYPE_OP.NUM && mirilla[i].cond.op2.type == TYPE_OP.NUM && !evaluateConstantIf(mirilla[i].cond)){
                 _report.push({
                     original: buildString([mirilla[i]]),
@@ -192,10 +206,13 @@ function optimizeRule5(mirilla){
 
 function optimizeRule6(mirilla){
     for(var i = 0; i < mirilla.length; i++){
+        //if line is goto
         if(mirilla[i].type == TYPE_OP.GOTO){
             var destinyLabel = mirilla[i].label;
 
+            //loop from i to end of mirilla
             for(var lookup = i + 1; lookup < mirilla.length; lookup++){
+                //if destinyLabel is found
                 if(lookup < mirilla.length - 1 && mirilla[lookup].type == TYPE_OP.LABEL && mirilla[lookup].label == destinyLabel){
                     //see if next statement is a jump
                     if(mirilla[lookup + 1].type == TYPE_OP.GOTO){
@@ -216,10 +233,13 @@ function optimizeRule6(mirilla){
 
 function optimizeRule7(mirilla){
     for(var i = 0; i < mirilla.length; i++){
+        //if line is IF
         if(mirilla[i].type == TYPE_OP.IF){
             var destinyLabel = mirilla[i].label;
 
+            //loop from i to end of mirilla
             for(var lookup = i + 1; lookup < mirilla.length; lookup++){
+                //if destiny Label is found
                 if(lookup < mirilla.length - 1 && mirilla[lookup].type == TYPE_OP.LABEL && mirilla[lookup].label == destinyLabel){
                     //see if next statement is a jump
                     if(mirilla[lookup + 1].type == TYPE_OP.GOTO){

@@ -46,7 +46,7 @@
 [0-9]+("."[0-9]*)?     	                    return 'LITERAL_NUM';
 "\"%d\""|"\"%i\""|"\"%c'\""                 return 'R_PRINTF';
 L[0-9]+	                                    return 'LABEL';
-([a-zA-Z])[a-zA-ZñÑ0-9_]*	                return 'ID';
+([a-zA-Z_])[a-zA-ZñÑ0-9_]*	                return 'ID';
 
 <<EOF>>				                        return 'EOF';
 
@@ -142,12 +142,12 @@ assign
     : atomic EQUAL MINUS atomic %prec UMENOS
         {
             //x = - 0
-            if($atomic4.val == '0'){
+            if($atomic2.val == '0'){
                 _report.push({
                     original: [$1.val, $2, $3, $4.val].join(" "),
-                    optimized: "#eliminated",
+                    optimized: `${$1.val} = 0;`,
                     rule: 13, line: @$.first_line})
-                $$ = null;
+                $$ = {type: TYPE_OP.ASSIGN, target: $1, op1: $4, op: null, op2: null};
             }
             else
                 $$ = {type: TYPE_OP.ASSIGN, target: $1, op1: $4, op: $3, op2: null}

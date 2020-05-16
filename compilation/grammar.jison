@@ -108,7 +108,7 @@
 
 \"                                          { strBuffer = ""; this.begin('STRING'); }
 \'                                          { this.begin('CHAR'); }
-([a-zA-Z])[a-zA-ZñÑ0-9_.]*".js"	            return 'FILENAME';
+([a-zA-Z])[a-zA-ZñÑ0-9_.]*".j"	            return 'FILENAME';
 ([a-zA-Z])[a-zA-ZñÑ0-9_]*	                return 'ID';
 
 
@@ -247,7 +247,7 @@ statement
         { $$ = $1; }
     | varAssign
         { $$ = $1; }
-    | jump_control
+    | jump
         { $$ = $1; }
     | defineStruct
         { $$ = $1; }
@@ -277,11 +277,11 @@ varDeclar
     | ID ID EQUAL exp
         { $$ = {type: TYPE_OP.DECLAR, jType: $1.toUpperCase(), id: $2.toUpperCase(), exp: $4, line: @$.first_line, column: @$.first_column}; }
     | R_VAR ID COLONEQUAL exp  
-        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2.toUpperCase(), exp: $4, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.DECLAR, jType: $1.toUpperCase(), id: $2.toUpperCase(), exp: $4, line: @$.first_line, column: @$.first_column}; }
     | R_CONST ID COLONEQUAL exp  
-        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2.toUpperCase(), exp: $4, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.DECLAR, jType: $1.toUpperCase(), id: $2.toUpperCase(), exp: $4, line: @$.first_line, column: @$.first_column}; }
     | R_GLOBAL ID COLONEQUAL exp  
-        { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2.toUpperCase(), exp: $4, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.DECLAR, jType: $1.toUpperCase(), id: $2.toUpperCase(), exp: $4, line: @$.first_line, column: @$.first_column, global: true}; }
     | type ID 
         { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2.toUpperCase(), exp: null, line: @$.first_line, column: @$.first_column}; }
     | ID ID 
@@ -444,7 +444,7 @@ update
 
 exp_arithmetic
     : MINUS exp %prec UMINUS
-        { $$ = {type: TYPE_OP.UMINUS, op1: $2, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.UMINUS, op1: $2, op: $1, line: @$.first_line, column: @$.first_column}; }
     | exp PLUS exp
         { $$ = {type: TYPE_OP.PLUS, op1: $1, op: $2, op2: $3, line: @$.first_line, column: @$.first_column}; }
     | exp MINUS exp
@@ -475,13 +475,13 @@ exp_logic
     | exp GREATEREQUAL exp
         { $$ = {type: TYPE_OP.GREATEREQUAL, op1: $1, op: $2, op2: $3, line: @$.first_line, column: @$.first_column}; }
     | exp AND exp
-        { $$ = {type: TYPE_OP.AND, op1: $1, op2: $3, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.AND, op1: $1, op:$2, op2: $3, line: @$.first_line, column: @$.first_column}; }
     | exp OR exp
-        { $$ = {type: TYPE_OP.OR, op1: $1, op2: $3, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.OR, op1: $1, op:$2, op2: $3, line: @$.first_line, column: @$.first_column}; }
     | exp XOR exp
-        { $$ = {type: TYPE_OP.XOR, op1: $1, op2: $3, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.XOR, op1: $1, op:$2, op2: $3, line: @$.first_line, column: @$.first_column}; }
     | NOT exp
-        { $$ = {type: TYPE_OP.NOT, op1: $2, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.NOT, op1: $2, op: $1, line: @$.first_line, column: @$.first_column}; }
 ;
 
 atomic
@@ -490,7 +490,7 @@ atomic
     | LITERAL_DOUBLE
         { $$ = AST_API.newVal(TYPE_VAL.DOUBLE, Number($1), @$.first_line, @$.first_column);}
     | LITERAL_BOOLEAN
-        { $$ = AST_API.newVal(TYPE_VAL.BOOLEAN, $1.toLowerCase() == "true" ? 1 : 0, @$.first_line, @$.first_column); }
+        { $$ = AST_API.newVal(TYPE_VAL.BOOLEAN, $1.toUpperCase() == "TRUE" ? 1 : 0, @$.first_line, @$.first_column); }
     | LITERAL_CHAR
         { $$ = AST_API.newVal(TYPE_VAL.CHAR, $1.charCodeAt(0), @$.first_line, @$.first_column); }
     | LITERAL_STRING

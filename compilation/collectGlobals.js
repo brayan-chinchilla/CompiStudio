@@ -1,5 +1,4 @@
 const TYPE_OP = require('./util').TYPE_OP
-const TYPE_VAL = require('./util').TYPE_VAL
 
 let Symbol = require('./util').Symbol
 let Scope = require('./util').Scope
@@ -26,18 +25,15 @@ function addScope(id, type, padre_id){
 }
 
 /**
- * Traverse AST and collect global vars, no creation of scopes
- * @param {[]} instructions 
+ * Scan for global vars, and process struct definitions
+ * @param {[]} instructions block of instructions
+ * @param {boolean} isGlobal if current scope is global 
  */
 function processInstructions(instructions, isGlobal = false){
     instructions.forEach((instruction) => {
         if(instruction.type == TYPE_OP.DECLAR){
             //if we're on global scope, then add and mark as ready
-            if(isGlobal){
-                var sym = new Symbol(instruction.id, isPrimType(instruction.jType) ? "_global_prim" : "_global_obj", instruction.jType, "_global", 1, _globalPos++);
-                _globalScope.addSymbol(sym);
-            }
-            else if(instruction.jType.toLowerCase == "global"){
+            if(isGlobal || instruction.jType.toLowerCase() == "global"){
                 var sym = new Symbol(instruction.id, isPrimType(instruction.jType) ? "_global_prim" : "_global_obj", instruction.jType, "_global", 1, _globalPos++);
                 _globalScope.addSymbol(sym);
             }
@@ -48,7 +44,7 @@ function processInstructions(instructions, isGlobal = false){
             var relativePos = 0;                    
             //Add all other properties to the scope
             instruction.l_declar.forEach((declar) => {
-                newScope.addSymbol(new Symbol(declar.id, isPrimType(instruction.jType) ? "_property_prim" : "_property_obj", declar.jType, newScope.id, 1, relativePos++));
+                newScope.addSymbol(new Symbol(declar.id, isPrimType(declar.jType) ? "_property_prim" : "_property_obj", declar.jType, newScope.id, 1, relativePos++));
             });
             newScope.size = relativePos;
 
@@ -91,7 +87,7 @@ function processInstructions(instructions, isGlobal = false){
             processInstructions(instruction.catchBlock);
         }
         else{
-            //just skip any other statement
+            //just skip any other statement as it is not relevant to global vars
         }
     })
 }

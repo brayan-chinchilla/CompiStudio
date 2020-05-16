@@ -30,27 +30,6 @@ module.exports.Symbol = class Symbol {
         this.scope = scope;
         this.size = size;
         this.pos = pos;
-
-        if(this.type == "var_local" || this.type == "var_global" || this.type == "return"){
-            switch(jType){
-                case TYPE_VAL.INTEGER:
-                case TYPE_VAL.DOUBLE:
-                case TYPE_VAL.CHAR:
-                case TYPE_VAL.BOOLEAN:
-                    break;
-                default:
-                    this.type += "_obj"
-                    break;
-            }
-        }
-    }
-}
-
-module.exports.Error = class Error {
-    constructor(detail, line, column){
-        this.detail = detail;
-        this.line = line;
-        this.column = column;
     }
 }
 
@@ -106,7 +85,7 @@ const TYPE_OP = {
     CAST:           'CAST',
     ARRAY_DEF:      'ARRAY_DEF',
     STRC:           'STRC',    
-    ID:              'OP_ID',
+    ID:             'OP_ID',
 };
 
 const AST_API = {
@@ -132,6 +111,7 @@ const TYPE_VAL = {
 }
 
 module.exports.isPrimType = function isPrimType(type){
+    type = type.toUpperCase();
     switch(type){
         case TYPE_VAL.INTEGER:
         case TYPE_VAL.DOUBLE:
@@ -144,6 +124,7 @@ module.exports.isPrimType = function isPrimType(type){
 }
 
 module.exports.isImplicitCast = function isImplicitCast(endType, type){
+    endType = endType.toUpperCase();
     if(endType == TYPE_VAL.DOUBLE && (type == TYPE_VAL.INTEGER || type == TYPE_VAL.CHAR))
         return true;
     else if(endType == TYPE_VAL.INTEGER && type == TYPE_VAL.CHAR)

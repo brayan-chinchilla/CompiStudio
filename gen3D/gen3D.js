@@ -64,7 +64,7 @@ function gen3D(instructions){
     //execute globals
     gen3D_executeGlobals(instructions.filter(inst => inst.type == TYPE_OP.DECLAR || inst.type == TYPE_OP.DEFINE_STRC))
 
-    _output.push("call principal;")
+    _output.push("call _func_principal;")
 
     var labelEndProgram = genLabel();
     _output.push(`goto ${labelEndProgram};`)
@@ -84,12 +84,11 @@ function gen3D_funcs(functions){
             funcId += "-" + param.jType
         })
 
-        _output.push(`\nproc ${funcId} begin`);
+        _output.push(`\nproc ${funcId.replace("-", "_")} begin`);
 
         addDisplay("_func", null, genLabel(), _symbolTable.find(scope => scope.id == funcId))
 
         //gen3D_local
-        _localScopeCount = 0;
         gen3D_LocalBlock(func.block);
 
         _output.push(`${removeDisplay().endLabel}:`)
@@ -99,12 +98,13 @@ function gen3D_funcs(functions){
 
 function gen3D_LocalBlock(instructions){
     instructions.forEach(inst => {
-
-        //TODO pending implementation
         if(inst.type == TYPE_OP.DEFINE_STRC){
+            gen3D_DefineStrc(inst);
         }
         else if(inst.type == TYPE_OP.DECLAR){
+            gen3D_Declar(inst);
         }
+        //TODO pending implementation
         else if(inst.type == TYPE_OP.ASSIGN){
         }
         else if(inst.type == TYPE_OP.IF){
@@ -150,42 +150,73 @@ function gen3D_executeGlobals(instructions){
     _output.push("#--------- begin execute globals")
     instructions.forEach(inst => {
         if(inst.type == TYPE_OP.DECLAR){
-            if(inst.exp != null){
-                var exp = gen3D_Exp(inst.exp);
-                var sym = _currentScope.getSymbol(_symbolTable, inst.id, true);
-                _output.push(`heap[${sym.pos}] = ${exp.val};`);
-            }
-            //if prim initialize to 0
-            else if(isPrimType(inst.jType)){
-                _output.push(`heap[${sym.pos}] = 0;`);
-            }
+            gen3D_DeclarGlobal(inst);
         }
         else if(inst.type == TYPE_OP.DEFINE_STRC){
-            var objDefSym = _currentScope.getSymbol(_symbolTable, "_obj_" + inst.id, true);
-            var objScope = _symbolTable.find((scope) => scope.id == "_obj_" + inst.id);
-
-            _output.push(`heap[${objDefSym.pos}] = h; #pos where _obj_def will reside`);
-            _output.push(`h = h + ${objScope.size}; #skip size of obj`);
-
-            inst.l_declar.forEach(declar => {
-                var tmpObjPosStart = genTmp();
-                _output.push(`${tmpObjPosStart} = heap[${objDefSym.pos}];`)
-                var tmpObjPos = genTmp();
-                _output.push(`${tmpObjPos} = ${tmpObjPosStart} + ${objScope.getSymbol(null, declar.id, true).pos};`);
-                if(declar.exp == null)
-                    _output.push(`heap[${tmpObjPos}] = ${isPrimType(declar.jType) ? 0 : -1};`);
-                else
-                    _output.push(`heap[${tmpObjPos}] = ${gen3D_Exp(declar.exp).val};`);                
-            })
+            gen3D_DefineStrc(inst);
         }
     })
     _output.push("#--------- end execute globals")
 }
 
+function gen3D_DeclarGlobal(inst){
+    //initialize var if there is an expression
+    var sym = _symbolTable[0].getSymbol(_symbolTable, inst.id, true);
+
+    if(inst.exp != null){
+        var exp = gen3D_Exp(inst.exp);
+        _output.push(`heap[${sym.pos}] = ${exp.val};`);
+    }
+    //if prim initialize to 0
+    else if(isPrimType(inst.jType)){
+        _output.push(`heap[${sym.pos}] = 0;`);
+    }
+}
+
+function gen3D_DefineStrc(inst){
+    var objDefSym = _symbolTable[0].getSymbol(_symbolTable, "_obj_" + inst.id, true);
+    var objScope = _symbolTable.find((scope) => scope.id == "_obj_" + inst.id);
+
+    _output.push(`heap[${objDefSym.pos}] = h; #pos where _obj_def will reside`);
+    _output.push(`h = h + ${objScope.size}; #skip size of obj`);
+
+    var tmpObjPosStart = genTmp();
+    _output.push(`${tmpObjPosStart} = heap[${objDefSym.pos}];`)
+
+    inst.l_declar.forEach(declar => {
+        var tmpObjPos = genTmp();
+        _output.push(`${tmpObjPos} = ${tmpObjPosStart} + ${objScope.getSymbol(null, declar.id, true).pos};`);
+        if(declar.exp == null)
+            _output.push(`heap[${tmpObjPos}] = ${isPrimType(declar.jType) ? 0 : -1};`);
+        else
+            _output.push(`heap[${tmpObjPos}] = ${gen3D_Exp(declar.exp).val};`);                
+    })
+}
+
+function gen3D_Declar(inst){
+    if(inst.global){
+        gen3D_DeclarGlobal(inst)
+    }
+    else{
+        var sym = _currentScope.getSymbol(_symbolTable, inst.id, true);
+
+        if(inst.exp != null){
+            var exp = gen3D_Exp(inst.exp);
+            var tmpPos = genTmp();
+            _output.push(`${tmpPos} = p + ${sym.pos};`)
+            _output.push(`stack[${tmpPos}] = ${exp.val};`);
+        }
+        //if prim initialize to 0
+        else if(isPrimType(inst.jType)){
+            var tmpPos = genTmp();
+            _output.push(`${tmpPos} = p + ${sym.pos};`)
+            _output.push(`stack[${tmpPos}] = 0;`);
+        }
+    }
+}
+
 function gen3D_Exp(exp){
     switch(exp.type){
-        case TYPE_OP.CALL:
-            return gen3D_Call(exp);
         case TYPE_OP.CALL_JS:
             return gen3D_CallJs(exp);
         case TYPE_OP.ARRAY_DEF:
@@ -207,8 +238,6 @@ function gen3D_Exp(exp){
             return gen3D_Ternary(exp);
         case TYPE_OP.CAST:
             return gen3D_Cast(exp);
-        case TYPE_OP.POW:
-            return gen3D_Arithmetic_StrictInteger(exp);
         case TYPE_OP.LESS:
         case TYPE_OP.LESSEQUAL:
         case TYPE_OP.GREATER:
@@ -226,6 +255,8 @@ function gen3D_Exp(exp){
         case TYPE_OP.NOT:
             return gen3D_Not(exp);
         //already implemented
+        case TYPE_OP.CALL:
+            return gen3D_Call(exp);
         case TYPE_OP.ATOMIC:
             return gen3D_Atomic(exp);
         case TYPE_OP.PLUS:
@@ -234,9 +265,15 @@ function gen3D_Exp(exp){
         case TYPE_OP.DIVIDE:
         case TYPE_OP.MODULE:
             return gen3D_Arithmetic(exp);
+        case TYPE_OP.POW:
+            return gen3D_Pow(exp);
         case TYPE_OP.UMINUS:
             return gen3D_Uminus(exp);
     }
+}
+
+function gen3D_Call(exp){
+
 }
 
 function gen3D_Atomic(exp){
@@ -264,6 +301,25 @@ function gen3D_Arithmetic(exp){
     _output.push(`${tmp} = ${exp1.val} ${exp.op} ${exp2.val};`)
 
     return {val: tmp};
+}
+
+function gen3D_Pow(exp){
+    var exp1 = gen3D_Exp(exp.op1);
+    var exp2 = gen3D_Exp(exp.op2);
+
+    //advance stack pointer
+    _output.push(`p = p + ${_funcScope.size}`)
+
+    //put params
+    var param1
+    _output.push()
+
+    //capture return
+    var tmp = genTmp();
+    _output.push(`${tmp} = stack[p];`)
+
+    //restore stack pointer
+    _output.push(`p = p - ${_funcScope.size}`)
 }
 
 function gen3D_Uminus(exp){

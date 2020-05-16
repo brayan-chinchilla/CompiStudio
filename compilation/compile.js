@@ -16,7 +16,7 @@ let getExpType = require('./expTypes').getExpType;
 let isPrimType = require('./util').isPrimType;
 
 let gen3D = require('../gen3D/gen3D').gen3D;
-let genDOT_AST = require('../genDOT_AST').genDOT_AST;
+let genDOT_AST = require('./genDOT_AST').genDOT_AST;
 
 function throwError(detail, statement){
     throw {type:"SEMANTIC", detail: detail, line:statement.line, column: statement.column}
@@ -29,13 +29,12 @@ function buildSymbolTable(statements, currentScope, isGlobal){
                 //do nothing
             }
             else if(statement.type == TYPE_OP.DECLAR){
-                if(isGlobal){
+                if(isGlobal || statement.jType.toUpperCase() == 'GLOBAL'){
                     var sym = currentScope.getSymbol(_symbolTable, statement.id);
 
                     //put type if it was not explicit
                     if(statement.jType.toUpperCase() == 'VAR' || statement.jType.toUpperCase() == 'CONST' || statement.jType.toUpperCase() == 'GLOBAL'){
-                        var expType = getExpType(statement.exp, _symbolTable, currentScope);
-                        sym.jType = expType;
+                        sym.jType = getExpType(statement.exp, _symbolTable, currentScope);
 
                         sym.type = isPrimType(sym.jType) ? "_global_prim" : "_global_obj";
                         if(statement.jType.toUpperCase() == 'CONST')
@@ -45,10 +44,8 @@ function buildSymbolTable(statements, currentScope, isGlobal){
                     else{
                         if(statement.exp != null){
                             var expType = getExpType(statement.exp, _symbolTable, currentScope);
-                            if(statement.jType.toUpperCase() != expType.toUpperCase()){
-
-                                if(! isImplicitCast(statement.jType, expType))
-                                    throwError(`Type missmatch\n${statement.jType} = ${expType}`, statement);
+                            if(statement.jType.toUpperCase() != expType.toUpperCase() && !isImplicitCast(statement.jType, expType)){ 
+                                throwError(`Type missmatch\n${statement.jType} = ${expType}`, statement);
                             }
                         }
                     }
@@ -58,7 +55,7 @@ function buildSymbolTable(statements, currentScope, isGlobal){
                     currentScope.addSymbol(sym);
 
                     //put type if it was not explicit
-                    if(statement.jType.toUpperCase() == 'VAR' || statement.jType.toUpperCase() == 'CONST' || statement.jType.toUpperCase() == 'GLOBAL'){
+                    if(statement.jType.toUpperCase() == 'VAR' || statement.jType.toUpperCase() == 'CONST'){
                         var expType = getExpType(statement.exp, _symbolTable, currentScope);
                         sym.jType = expType;
 
@@ -70,10 +67,8 @@ function buildSymbolTable(statements, currentScope, isGlobal){
                     else{
                         if(statement.exp != null){
                             var expType = getExpType(statement.exp, _symbolTable, currentScope);
-                            if(statement.jType.toUpperCase() != expType.toUpperCase()){
-
-                                if(! isImplicitCast(statement.jType, expType))
-                                    throwError(`Type missmatch\n${statement.jType} = ${expType}`, statement);
+                            if(statement.jType.toUpperCase() != expType.toUpperCase() && !isImplicitCast(statement.jType, expType)){
+                                throwError(`Type missmatch\n${statement.jType} = ${expType}`, statement);
                             }
                         }
                     }
@@ -228,7 +223,7 @@ function compile(ast){
     //print SymbolTable in json format
     fs.writeFileSync(__dirname + '/../debug/st.json', JSON.stringify(_symbolTable));
 
-    return gen3D(_symbolTable, ast);
+    return _errores.length == 0 ? gen3D(_symbolTable, ast) : "#check error report";
 }
 
 var _relativePos = 0;
@@ -247,7 +242,7 @@ module.exports.compile = (sourceStr) => {
         var ast = parsedSource.ast;
         _errores = _errores.concat(parsedSource.errores);
 
-        var C3D = compile(ast);
+        var C3D = compile(ast);            
         
         //prepare symbolTable for report
         symbolTableUnified = [];
@@ -263,6 +258,6 @@ module.exports.compile = (sourceStr) => {
         _symbolTable.forEach(scope => {
             symbolTableUnified.concat(symbolTableUnified, scope.symbols);
         })
-        return {C3D: "#error", errorTable: _errores, symbolTable: symbolTableUnified, ast: "digraph ast{}"}
+        return {C3D: "#check error report", errorTable: _errores, symbolTable: symbolTableUnified, ast: "digraph ast{}"}
     }
 }

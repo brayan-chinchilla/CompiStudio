@@ -35,6 +35,8 @@ function isNumeric(type){
 }
 
 function maxType(type1, type2){
+    type1 = type1.toUpperCase();
+    type2 = type2.toUpperCase();
     if(type1 == "STRING" || type2 == "STRING")
         return "STRING";
     else if(type1 == TYPE_VAL.DOUBLE || type2 == TYPE_VAL.DOUBLE)

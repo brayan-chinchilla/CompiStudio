@@ -221,6 +221,7 @@ function compile(){
 		var svgBlob = new Blob([element], {type: 'image/svg+xml;charset=utf-8'});
 		var url = DOMURL.createObjectURL(svgBlob);	
     $('#AST').attr('href', url);
+    $('#AST').attr('target', "_blank");
     
     //symbolTable
     $('#table_SymbolTable').DataTable().clear().rows.add(response.symbolTable).draw();
