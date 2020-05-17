@@ -1,0 +1,424 @@
+
+proc _func_concat_string_string begin
+    t0 = h;
+    t1 = p + 1;
+    t2 = stack[T1];
+    t3 = heap[t2];
+L2:
+    if(t3 == 0) goto L3;
+    heap[h] = t3;
+    h = h + 1;
+    t2 = t2 + 1;
+    t3 = heap[t2];
+    goto L2;
+L3:
+    t1 = p + 2;
+    t2 = stack[T1];
+    t3 = heap[t2];
+L4:
+    if(t3 == 0) goto L5;
+    heap[h] = t3;
+    h = h + 1;
+    t2 = t2 + 1;
+    t3 = heap[t2];
+    goto L4;
+L5:
+    heap[h] = 0;
+    h = h + 1;
+    Stack[p] = t0;
+L1:
+end
+
+proc _func_concat_string_boolean begin
+    t0 = h;
+    t1 = p + 1;
+    t2 = Stack[t1];
+    t3 = Heap[t2];
+L6:
+    if (t3 == 0) goto L7;
+    Heap[h] = t3;
+    h = h + 1;
+    t2 = t2 + 1;
+    t3 = Heap[t2];
+    goto L6;
+L7:
+    t1 = p + 2;
+    t2 = stack[t1];
+    if (t2 == 1) goto L8;
+    Heap[h] = 146;
+    h = h + 1;
+    Heap[h] = 97;
+    h = h + 1;
+    Heap[h] = 108;
+    h = h + 1;
+    Heap[h] = 115;
+    h = h + 1;
+    Heap[h] = 101;
+    h = h + 1;
+    goto L9;
+L8:
+    Heap[h] = 116;
+    h = h + 1;
+    Heap[h] = 114;
+    h = h + 1;
+    Heap[h] = 117;
+    h = h + 1;
+    Heap[h] = 101;
+    h = h + 1;
+L9:
+    Heap[h] = 0;
+    h = h + 1;
+    Stack[p] = t0;
+end
+
+proc _func_concat_boolean_string begin
+    t0 = h;
+    t1 = p + 1;
+    t2 = Stack[t1];
+    if (t2 == 1) goto L10;
+    Heap[h] = 146;
+    h = h + 1;
+    Heap[h] = 97;
+    h = h + 1;
+    Heap[h] = 108;
+    h = h + 1;
+    Heap[h] = 115;
+    h = h + 1;
+    Heap[h] = 101;
+    h = h + 1;
+    goto L11;
+L10:
+    Heap[h] = 116;
+    h = h + 1;
+    Heap[h] = 114;
+    h = h + 1;
+    Heap[h] = 117;
+    h = h + 1;
+    Heap[h] = 101;
+    h = h + 1;
+L11:
+    t1 = p + 2;
+    t2 = Stack[t1];
+    t3 = Heap[t2];
+L12:
+    if (t3 == 0) goto L13;
+    Heap[h] = t3;
+    h = h + 1;
+    t2 = t2 + 1;
+    t3 = Heap[t2];
+    goto L12;
+L13:
+    Heap[h] = 0;
+    h = h + 1;
+    Stack[p] = t0;
+end
+
+proc _func_concat_string_char begin
+    t0 = h;
+    t1 = p + 1;
+    t2 = Stack[t1];
+    t3 = Heap[t2];
+L14:
+    if (t3 == 0) goto L15;
+    Heap[h] = t3;
+    h = h + 1;
+    t2 = t2 + 1;
+    t3 = Heap[t2];
+    goto L14;
+L15:
+    t1 = p + 2;
+    t2 = Stack[t1];
+    Heap[h] = t2;
+    h = h + 1;
+    Heap[h] = 0;
+    h = h + 1;
+    Stack[p] = t0;
+end
+
+proc _func_concat_char_string begin
+    t0 = h;
+    t1 = p + 1;
+    t2 = Stack[t1];
+    Heap[h] = t2;
+    h = h + 1;
+    t1 = p + 2;
+    t2 = Stack[t1];
+    t3 = Heap[t2];
+L16:
+    if (t3 == 0) goto L17;
+    Heap[h] = t3;
+    h = h + 1;
+    t2 = t2 + 1;
+    t3 = Heap[t2];
+    goto L16;
+L17:
+    Heap[h] = 0;
+    h = h + 1;
+    Stack[p] = t0;
+end
+
+proc _func_concat_string_integer begin
+    t0 = h;
+    t1 = 0;
+    t2 = p + 1;
+    t3 = Stack[t2];
+    t5 = Heap[t3];
+L18:
+    if (t5 == 0) goto L19;
+    Heap[h] = t5;
+    h = h + 1;
+    t3 = t3 + 1;
+    t5 = Heap[t3];
+    goto L18;
+L19:
+    t2 = p + 2;
+    t3 = Stack[t2];
+    t2 = 0;
+    if (t3 <> 0) goto L20;
+    t1 = t1 + 1;
+L20:
+    if (t3 >= 0) goto L21;
+    t3 = -1 * t3;
+    Heap[h] = 45;
+    h = h + 1;
+L21:
+    if (t3 <= 0) goto L22;
+    t2 = t2 * 10;
+    t5 = t3 % 10;
+    t2 = t2 + t5;
+    t3 = t3 / 10;
+    t6 = t3 % 1;
+    t3 = t3 - t6;
+    t1 = t1 + 1;
+    goto L21;
+L22:
+    if (t1 == 0) goto L23;
+    t3 = t2 % 10;
+    t2 = t2 / 10;
+    t6 = t2 % 1;
+    t2 = t2 - t6;
+    t1 = t1 - 1;
+    t5 = t3 + 48;
+    Heap[h] = t5;
+    h = h + 1;
+    goto L22;
+L23:
+    Heap[h] = 0;
+    h = h + 1;
+    Stack[p] = t0;
+end
+
+proc _func_concat_integer_string begin
+    t0 = h;
+    t1 = 0;
+    t2 = p + 1;
+    t3 = Stack[t2];
+    t2 = 0;
+    if (t3 <> 0) goto L26;
+    t1 = t1 + 1;
+L26:
+    if (t3 >= 0) goto L25;
+    t3 = -1 * t3;
+    Heap[h] = 45;
+    h = h + 1;
+L25:
+    if (t3 <= 0) goto L27;
+    t2 = t2 * 10;
+    t5 = t3 % 10;
+    t2 = t2 + t5;
+    t3 = t3 / 10;
+    t6 = t3 % 1;
+    t3 = t3 - t6;
+    t1 = t1 + 1;
+    goto L25;
+L27:
+    if (t1 <= 0) goto L28;
+    t3 = t2 % 10;
+    t2 = t2 / 10;
+    t6 = t2 % 1;
+    t2 = t2 - t6;
+    t5 = t3 + 48;
+    t1 = t1 - 1;
+    Heap[h] = t5;
+    h = h + 1;
+    goto L27;
+L28:
+    t2 = p + 2;
+    t3 = Stack[t2];
+    t5 = Heap[t3];
+L24:
+    if (t5 == 0) goto L30;
+    Heap[h] = t5;
+    h = h + 1;
+    t3 = t3 + 1;
+    t5 = Heap[t3];
+    goto L24;
+L30:
+    Heap[h] = 0;
+    h = h + 1;
+    Stack[p] = t0;
+end
+
+proc _func_concat_string_double begin
+    t0 = h;
+    t8 = 0;
+    t2 = p + 1;
+    t3 = Stack[t2];
+    t5 = Heap[t3];
+L29:
+    if (t5 == 0) goto L31;
+    Heap[h] = t5;
+    h = h + 1;
+    t3 = t3 + 1;
+    t5 = Heap[t3];
+    goto L29;
+L31:
+    t2 = p + 2;
+    t3 = Stack[t2];
+    t1 = t3 % 1;
+    t3 = t3 - t1;
+    t1 = Stack[t2];
+    t2 = 0;
+    if (t3 <> 0) goto L32;
+    t1 = t1 + 1;
+L32:
+    if (t3 >= 0) goto L41;
+    t3 = -1 * t3;
+    Heap[h] = 45;
+    h = h + 1;
+L41:
+    if (t3 <= 0) goto L42;
+    t2 = t2 * 10;
+    t5 = t3 % 10;
+    t2 = t2 + t5;
+    t3 = t3 / 10;
+    t6 = t3 % 1;
+    t3 = t3 - t6;
+    t8 = t8 + 1;
+    goto L41;
+L42:
+    if (t8 <= 0) goto L43;
+    t3 = t2 % 10;
+    t2 = t2 / 10;
+    t6 = t2 % 1;
+    t2 = t2 - t6;
+    t8 = t8 - 1;
+    t5 = t3 + 48;
+    Heap[h] = t5;
+    h = h + 1;
+    goto L42;
+L43:
+    Heap[h] = 46;
+    h = h + 1;
+    t6 = 0;
+L44:
+    if (t6 == 2) goto L45;
+    t1 = t1 * 10;
+    t3 = t1 % 10;
+    t2 = t1 % 1;
+    t3 = t3 - t2;
+    t5 = t3 + 48;
+    Heap[h] = t5;
+    h = h + 1;
+    t6 = t6 + 1;
+    goto L44;
+L45:
+    Heap[h] = 0;
+    h = h + 1;
+    Stack[p] = t0;
+end
+
+proc _func_concat_double_string begin
+    t0 = h;
+    t8 = 0;
+    t2 = p + 1;
+    t3 = Stack[t2];
+    if (t3 <> 0) goto L40;
+    t1 = t1 + 1;
+L40:
+    t1 = t3 % 1;
+    t3 = t3 - t1;
+    t1 = Stack[t2];
+    t2 = 0;
+    if (t3 >= 0) goto L35;
+    t3 = -1 * t3;
+    Heap[h] = 45;
+    h = h + 1;
+L35:
+    if (t3 <= 0) goto L36;
+    t2 = t2 * 10;
+    t5 = t3 % 10;
+    t2 = t2 + t5;
+    t3 = t3 / 10;
+    t6 = t3 % 1;
+    t3 = t3 - t6;
+    t8 = t8 + 1;
+    goto L35;
+L36:
+    if (t8 <= 0) goto L37;
+    t3 = t2 % 10;
+    t2 = t2 / 10;
+    t6 = t2 % 1;
+    t2 = t2 - t6;
+    t8 = t8 - 1;
+    t5 = t3 + 48;
+    Heap[h] = t5;
+    h = h + 1;
+    goto L36;
+L37:
+    Heap[h] = 46;
+    h = h + 1;
+    t6 = 0;
+L38:
+    if (t6 == 2) goto L39;
+    t1 = t1 * 10;
+    t3 = t1 % 10;
+    t2 = t1 % 1;
+    t3 = t3 - t2;
+    t5 = t3 + 48;
+    Heap[h] = t5;
+    h = h + 1;
+    t6 = t6 + 1;
+    goto L38;
+L39:
+    t2 = p + 2;
+    t3 = Stack[t2];
+    t5 = Heap[t3];
+L33:
+    if (t5 == 0) goto L34;
+    Heap[h] = t5;
+    h = h + 1;
+    t3 = t3 + 1;
+    t5 = Heap[t3];
+    goto L33;
+L34:
+    Heap[h] = 0;
+    h = h + 1;
+    Stack[p] = t0;
+end
+
+proc _func_pow_integer_integer begin
+    t1 = p + 1;
+    t2 = stack[t1];
+    t3 = p + 2;
+    t4 = stack[t3];
+    if(t2 == 0) goto L48;
+    t5 = 1;
+L46:
+    if(t4 == 0) goto L47;
+    t5 = t5 * t2;
+    t4 = t4 - 1;
+    goto L46;
+L48:
+    t5 = 0;
+L47:
+    stack[p] = t5;
+end
+
+proc _func_trunk_any begin
+    t0 = p + 1;
+    t1 = Stack[t0];
+    t2 = t1 % 1;
+    t3 = t1 - t2;
+    Stack[p] = t3;
+end

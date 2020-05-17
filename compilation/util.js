@@ -7,8 +7,11 @@ module.exports.Scope =  class Scope {
         this.symbols = []
     }
 
+    someSymbol(id){
+        return this.symbols.some(s => s.id == id);
+    }
+
     addSymbol(symbol){
-        //TODO error if var exists
         this.symbols.push(symbol);
     }
 
@@ -17,8 +20,8 @@ module.exports.Scope =  class Scope {
             return this.symbols.find(s => s.id == id)
         else if(this.padre_id != null && !strict)
             return symbolTable.find(scope => scope.id == this.padre_id).getSymbol(symbolTable, id);
-        
-        //TODO error symbol does not exist
+
+        return null;
     }
 }
 
@@ -38,9 +41,8 @@ const TYPE_OP = {
     FUNC_DEF:       'FUNC_DEF',
 
     DECLAR:	        'DECLAR',               //
+    DECLAR_LIST:    'DECLAR_LIST',
     ASSIGN:		    'ASSIGN',
-    CALL:           'CALL',
-    CALL_JS:        'CALL_JS',
     IF:				'IF',                   //
     SWITCH:         'SWITCH',               //
     CASE:           'CASE',                 //
@@ -54,6 +56,11 @@ const TYPE_OP = {
     TRY:            'TRY',
     THROW:          'THROW',
 
+    DOT:            'DOT',
+    CALL:           'CALL',
+    CALL_JS:        'CALL_JS',
+    PLUSPLUS:       'OP_PLUSPLUS',
+    MINUSMINUS:     'OP_MINUSMINUS',
 
     ATOMIC:         'ATOMIC',
 
@@ -78,10 +85,7 @@ const TYPE_OP = {
     OR:             'OP_OR',                //
     NOT:            'OP_NOT',               //
     XOR:            'OP_XOR',
-    PLUSPLUS:       'OP_PLUSPLUS',
-    MINUSMINUS:     'OP_MINUSMINUS',
 
-    DOT:            'DOT',
     CAST:           'CAST',
     ARRAY_DEF:      'ARRAY_DEF',
     STRC:           'STRC',    
@@ -125,6 +129,7 @@ module.exports.isPrimType = function isPrimType(type){
 
 module.exports.isImplicitCast = function isImplicitCast(endType, type){
     endType = endType.toUpperCase();
+    type = type.toUpperCase();
     if(endType == TYPE_VAL.DOUBLE && (type == TYPE_VAL.INTEGER || type == TYPE_VAL.CHAR))
         return true;
     else if(endType == TYPE_VAL.INTEGER && type == TYPE_VAL.CHAR)

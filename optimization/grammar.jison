@@ -12,6 +12,9 @@
 "#".*										// comentario simple línea
 [#][*][^*]*[*]+([^#*][^*]*[*]+)*[#]         // comentario multi linea
 
+"-"[0-9]+("."[0-9]*)?     	                return 'NEG_LITERAL_NUM';
+\"\%d\"|\"\%i\"|\"\%c\"                     return 'R_PRINTF';
+
 ","                                         return "COMMA";
 ":"                                         return "COLON";
 ";"                                         return "SEMICOLON";
@@ -20,12 +23,12 @@
 "*"			                        		return 'TIMES';
 "/"			                        		return 'DIVIDE';
 "%"			                        		return 'MODULE';
+"<>"                                        return 'NOTEQUAL';
 "<="                    					return 'LESSEQUAL';
 "<"                                         return "LESS";
 ">="				                        return 'GREATEREQUAL';
 ">"					                        return 'GREATER';
 "=="                                        return 'EQUALEQUAL';
-"<>"                                        return 'NOTEQUAL';
 "="                                         return "EQUAL";
 "["                                         return 'BRACKET_L';
 "]"                                         return 'BRACKET_R';
@@ -43,8 +46,8 @@
 "proc"                                      return 'R_PROC';
 "print"                                     return 'R_PRINT';
 
+
 [0-9]+("."[0-9]*)?     	                    return 'LITERAL_NUM';
-"\"%d\""|"\"%i\""|"\"%c'\""                 return 'R_PRINTF';
 L[0-9]+	                                    return 'LABEL';
 ([a-zA-Z_])[a-zA-ZñÑ0-9_]*	                return 'ID';
 
@@ -104,8 +107,8 @@ statement
         { $$ =  {type: TYPE_OP.GOTO, label: $2, line: @$.first_line}}
     | R_CALL ID SEMICOLON
         { $$ = {type: TYPE_OP.CALL, id: $2, line: @$.first_line}}
-    | R_PRINT PAR_L R_PRINTF COMMA atomic PAR_R
-        { $$ = {type: TYPE_OP.PRINT, format: $3, atomic: $4, line: @$.first_line}}
+    | R_PRINT PAR_L R_PRINTF COMMA atomic PAR_R SEMICOLON
+        { $$ = {type: TYPE_OP.PRINT, format: $3, atomic: $5, line: @$.first_line}}
     | LABEL COLON
         { $$ = {type: TYPE_OP.LABEL, label: $1, line: @$.first_line}}
     | assign SEMICOLON
@@ -116,6 +119,8 @@ atomic
     : ID
         { $$ = {type: TYPE_OP.ID, val: $1.toLowerCase()} }
     | LITERAL_NUM
+        { $$ = {type: TYPE_OP.NUM, val: $1} }
+    | NEG_LITERAL_NUM
         { $$ = {type: TYPE_OP.NUM, val: $1} }
     | R_STACK BRACKET_L atomic BRACKET_R
         { $$ = {type: TYPE_OP.DS, val: "stack[" + $3.val + "]"}; }
@@ -294,16 +299,8 @@ assign
         }
     | atomic EQUAL atomic MODULE atomic
         {
-            //x = 1 % y
-            if($atomic2.val == '1'){
-                _report.push({
-                    original: [$1.val, $2, $3.val, $4, $5.val].join(" "),
-                    optimized: [$1.val, $2, "1"].join(" "),
-                    rule: -3, line: @$.first_line})
-                $$ = {type: TYPE_OP.ASSIGN, target:$1, op1:{type: TYPE_OP.NUM, val: "1"}, op:null, op2:null};
-            }
-            //x = y % y || x = y % 1
-            else if($atomic3.val == '1' || $atomic2.val == $atomic3.val){
+            //x = y % y
+            if($atomic2.val == $atomic3.val){
                 _report.push({
                     original: [$1.val, $2, $3.val, $4, $5.val].join(" "),
                     optimized: [$1.val, $2, "0"].join(" "),

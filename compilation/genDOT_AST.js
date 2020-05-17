@@ -59,18 +59,17 @@ function genDOT_AST(instructions, parentId){
                 genTerminal(inst.id, id);
                 if(inst.exp) genDOT_Exp(inst.exp, id);
                 break;
+            case TYPE_OP.DECLAR_LIST:
+                genTerminal(inst.jType, id);
+                var declar_list_nodeId = genNode("L_ID", id)
+                inst.l_id.forEach(id => {
+                    genTerminal(id, declar_list_nodeId)
+                })
+                if(inst.exp) genDOT_Exp(inst.exp, id);
+                break;
             case TYPE_OP.ASSIGN:
                 genDOT_Exp(inst.id, id);
                 genDOT_Exp(inst.exp, id);
-                break;
-            case TYPE_OP.CALL:
-                genDOT_Exp(inst.call, id);
-                var paramsId = genNode("L_EXP", id);
-                inst.params.forEach(param => {genDOT_EXP(param, paramsId)})
-                break;
-            case TYPE_OP.CALL_JS:
-                genDOT_Exp(inst.call, id);
-                genDOT_AST(inst.params, genNode("L_ASSIGN", id))
                 break;
             case TYPE_OP.IF:
                 genDOT_Exp(inst.cond, id);
@@ -118,6 +117,10 @@ function genDOT_AST(instructions, parentId){
             case TYPE_OP.THROW:
                 genDOT_Exp(inst.exp, id);
                 break;
+            default:
+                _output.pop();
+                _output.pop();
+                genDOT_Exp(inst, parentId);
         }
     })
 }
@@ -125,8 +128,25 @@ function genDOT_AST(instructions, parentId){
 function genDOT_Exp(exp, parentId){
     var expNodeId = genNode("EXP." + exp.type, parentId);
     switch(exp.type){
+        case TYPE_OP.CALL:
+            genTerminal(exp.call, expNodeId);
+            var paramsId = genNode("L_EXP", expNodeId);
+            exp.params.forEach(param => {genDOT_Exp(param, paramsId)})
+            break;
+        case TYPE_OP.CALL_JS:
+            genTerminal(exp.call, expNodeId);
+            genDOT_AST(exp.params, genNode("L_ASSIGN", expNodeId))
+            break;
+        case TYPE_OP.PLUSPLUS:
+        case TYPE_OP.MINUSMINUS:
+            genDOT_Exp(exp.op1, expNodeId);
+            genTerminal(exp.op, expNodeId);
+            break;
         case TYPE_OP.ATOMIC:
             genTerminal(exp.val, expNodeId);
+            break;
+        case TYPE_OP.DOLLAR:
+            genDOT_Exp(exp.exp, expNodeId);
             break;
         case TYPE_OP.ACCESS:
             genDOT_Exp(exp.base, expNodeId);
@@ -137,18 +157,10 @@ function genDOT_Exp(exp, parentId){
             genDOT_Exp(exp.ifTrue, expNodeId);
             genDOT_Exp(exp.ifFalse, expNodeId);
             break;
-        case TYPE_OP.DOLLAR:
-            genDOT_Exp(exp.exp, expNodeId);
-            break;
         case TYPE_OP.UMINUS:
         case TYPE_OP.NOT:
             genTerminal(exp.op, expNodeId);
             genDOT_Exp(exp.op1, expNodeId);
-            break;
-        case TYPE_OP.PLUSPLUS:
-        case TYPE_OP.MINUSMINUS:
-            genDOT_Exp(exp.op1, expNodeId);
-            genTerminal(exp.op, expNodeId);
             break;
         case TYPE_OP.DOT:
             genDOT_Exp(exp.base, expNodeId);   
@@ -168,6 +180,7 @@ function genDOT_Exp(exp, parentId){
         case TYPE_OP.ID:
             genTerminal(exp.val, expNodeId)
             break;
+        //binary op
         default:
             genDOT_Exp(exp.op1, expNodeId);
             genTerminal(exp.op, expNodeId);

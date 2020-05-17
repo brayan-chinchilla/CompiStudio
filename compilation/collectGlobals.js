@@ -38,8 +38,17 @@ function processInstructions(instructions, isGlobal = false){
                 _globalScope.addSymbol(sym);
             }
         }
+        if(instruction.type == TYPE_OP.DECLAR_LIST){
+            instruction.l_id.forEach(id => {
+                //if we're on global scope, then add and mark as ready
+                if(isGlobal || instruction.jType.toLowerCase() == "global"){
+                    var sym = new Symbol(id, isPrimType(instruction.jType) ? "_global_prim" : "_global_obj", instruction.jType, "_global", 1, _globalPos++);
+                    _globalScope.addSymbol(sym);
+                }
+            })
+        }
         else if(instruction.type == TYPE_OP.DEFINE_STRC){
-            var newScope = addScope("_obj_" + instruction.id.toUpperCase(), "_obj_def", null);
+            var newScope = addScope("_obj_" + instruction.id, "_obj_def", null);
 
             var relativePos = 0;                    
             //Add all other properties to the scope
@@ -57,7 +66,7 @@ function processInstructions(instructions, isGlobal = false){
                 funcId += "-" + param.jType
             })
             //add function name to global scope
-            _globalScope.addSymbol(new Symbol(funcId, "func", instruction.returnType, "_global", 0, -1))
+            _globalScope.addSymbol(new Symbol(funcId, "_func", instruction.returnType, "_global", -1, -1))
 
             processInstructions(instruction.block);
         }

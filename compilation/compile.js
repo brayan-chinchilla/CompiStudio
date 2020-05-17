@@ -2,6 +2,7 @@ let fs = require('fs');
 let parser = require('./grammar');
 
 const TYPE_OP = require('./util').TYPE_OP
+const TYPE_VAL = require('./util').TYPE_VAL
 
 let Scope = require('./util').Scope
 let Symbol = require('./util').Symbol
@@ -65,6 +66,8 @@ function buildSymbolTable(statements, currentScope, isGlobal){
                     }
                     //verify type if it was explicit
                     else{
+                        if(!isPrimType(statement.jType.replace("[]", "")) && !_symbolTable[0].symbols.some(sym => sym.id == "_obj_" + statement.jType.replace("[]", "")))
+                            throwError(`Type ${statement.jType.replace("[]", "")} does not exist`, statement);
                         if(statement.exp != null){
                             var expType = getExpType(statement.exp, _symbolTable, currentScope);
                             if(statement.jType.toUpperCase() != expType.toUpperCase() && !isImplicitCast(statement.jType, expType)){
@@ -74,15 +77,68 @@ function buildSymbolTable(statements, currentScope, isGlobal){
                     }
                 }
             }
+            else if(statement.type == TYPE_OP.DECLAR_LIST){
+                statement.l_id.forEach(id => {
+                    if(isGlobal || statement.jType.toUpperCase() == 'GLOBAL'){
+                        var sym = currentScope.getSymbol(_symbolTable, id);
+    
+                        //put type if it was not explicit
+                        if(statement.jType.toUpperCase() == 'VAR' || statement.jType.toUpperCase() == 'CONST' || statement.jType.toUpperCase() == 'GLOBAL'){
+                            sym.jType = getExpType(statement.exp, _symbolTable, currentScope);
+    
+                            sym.type = isPrimType(sym.jType) ? "_global_prim" : "_global_obj";
+                            if(statement.jType.toUpperCase() == 'CONST')
+                                sym.const = true;
+                        }
+                        //verify type if it was explicit
+                        else{
+                            if(statement.exp != null){
+                                var expType = getExpType(statement.exp, _symbolTable, currentScope);
+                                if(statement.jType.toUpperCase() != expType.toUpperCase() && !isImplicitCast(statement.jType, expType)){ 
+                                    throwError(`Type missmatch\n${statement.jType} = ${expType}`, statement);
+                                }
+                            }
+                        }
+                    }
+                    else{
+                        var sym = new Symbol(id, isPrimType(statement.jType) ? "_local_prim" : "_local_obj", statement.jType, currentScope.id, 1, _relativePos++);
+                        currentScope.addSymbol(sym);
+    
+                        //put type if it was not explicit
+                        if(statement.jType.toUpperCase() == 'VAR' || statement.jType.toUpperCase() == 'CONST'){
+                            var expType = getExpType(statement.exp, _symbolTable, currentScope);
+                            sym.jType = expType;
+    
+                            sym.type = isPrimType(sym.jType) ? "_local_prim" : "_local_obj";
+                            if(statement.jType.toUpperCase() == 'CONST')
+                                sym.const = true;
+                        }
+                        //verify type if it was explicit
+                        else{
+                            if(!isPrimType(statement.jType.replace("[]", "")) && !_symbolTable[0].symbols.some(sym => sym.id == "_obj_" + statement.jType.replace("[]", "")))
+                                throwError(`Type ${statement.jType.replace("[]", "")} does not exist`, statement);
+                            if(statement.exp != null){
+                                var expType = getExpType(statement.exp, _symbolTable, currentScope);
+                                if(statement.jType.toUpperCase() != expType.toUpperCase() && !isImplicitCast(statement.jType, expType)){
+                                    throwError(`Type missmatch\n${statement.jType} = ${expType}`, statement);
+                                }
+                            }
+                        }
+                    }
+                })
+            }
             else if(statement.type == TYPE_OP.ASSIGN){
                 var typeSym = getExpType(statement.id, _symbolTable, currentScope);
                 var typeExp = getExpType(statement.exp, _symbolTable, currentScope);
+
+                if(statement.type == TYPE_OP.ID && currentScope.getSymbol(_symbolTable, statement.id.val, false).const)
+                    throwError(`Attempt to modify constant ${statement.id.val}`, statement);
 
                 if(typeSym != typeExp && !isImplicitCast(typeSym, typeExp))
                     throwError(`Type missmatch\n${typeSym} = ${typeExp}`, statement);
             }
             else if(statement.type == TYPE_OP.IF){
-                var newScope = addScope("if", "Block", currentScope.id);
+                var newScope = addScope("_if", "_block", currentScope.id);
                 buildSymbolTable(statement.ifTrue, newScope, false);
 
                 if(statement.ifFalse){
@@ -90,14 +146,14 @@ function buildSymbolTable(statements, currentScope, isGlobal){
                 }
             }
             else if(statement.type == TYPE_OP.SWITCH){
-                var newScope = addScope("switch", "Block", currentScope.id);
+                var newScope = addScope("_switch", "_block", currentScope.id);
 
                 statement.cases.forEach((c) => {
                     buildSymbolTable(c.ifTrue, newScope, false);
                 })
             }
             else if(statement.type == TYPE_OP.FOR){
-                var newScope = addScope("for", "Block", currentScope.id);
+                var newScope = addScope("_for", "_block", currentScope.id);
                 if(statement.init)
                     buildSymbolTable([statement.init], newScope, false);
                 if(statement.update)
@@ -106,11 +162,11 @@ function buildSymbolTable(statements, currentScope, isGlobal){
                 buildSymbolTable(statement.block, newScope, false);
             }
             else if(statement.type == TYPE_OP.WHILE){
-                var newScope = addScope("while", "Block", currentScope.id);
+                var newScope = addScope("_while", "_block", currentScope.id);
                 buildSymbolTable(statement.block, newScope, false);
             }
             else if(statement.type == TYPE_OP.DO_WHILE){
-                var newScope = addScope("do_while", "Block", currentScope.id);
+                var newScope = addScope("_do_while", "_block", currentScope.id);
                 buildSymbolTable(statement.block, newScope, false);
             }
             else if(statement.type == TYPE_OP.FUNC_DEF){
@@ -124,7 +180,7 @@ function buildSymbolTable(statements, currentScope, isGlobal){
                 statement.params.forEach((param) => {
                     funcId += "-" + param.jType
                 })
-                var newScope = addScope(funcId, "func", "_global");
+                var newScope = addScope(funcId, "_func", "_global");
 
                 statement.params.forEach((param) => {
                     var sym = new Symbol(param.id, isPrimType(param.jType) ? "_local_prim" : "_local_obj", param.jType, newScope.id, 1, _relativePos++)
@@ -143,16 +199,33 @@ function buildSymbolTable(statements, currentScope, isGlobal){
             else if(statement.type == TYPE_OP.IMPORT){
                 //do nothing
             }
+            else if(statement.type == TYPE_OP.BREAK){
+                var isValid = false;
+                for(var s = currentScope; s.padre_id != null; s = _symbolTable.find(scope => scope.id == s.padre_id)){
+                    if(s.id.startsWith("_for") || s.id.startsWith("_while") || s.id.startsWith("_do_while") || s.id.startsWith("_switch")){
+                        isValid = true;
+                    }
+                }
+                if(!isValid)
+                    throwError("Break should be inside block", statement);
+            }
+            else if(statement.type == TYPE_OP.CONTINUE){
+                var isValid = false;
+                for(var s = currentScope; s.padre_id != null; s = _symbolTable.find(scope => scope.id == s.padre_id)){
+                    if(s.id.startsWith("_for") || s.id.startsWith("_while") || s.id.startsWith("_do_while")){
+                        isValid = true;
+                    }
+                }
+                if(!isValid)
+                    throwError("Continue should be inside loop", statement);
+            }
+            else if(statement.type == TYPE_OP.CALL || statement.type == TYPE_OP.CALL_JS || statement.type == TYPE_OP.PLUSPLUS || statement.type == TYPE_OP.DOT || TYPE_OP.MINUSMINUS){
+                getExpType(statement, _symbolTable, currentScope);
+            }
             //pending implementation
-            else if(statement.type == TYPE_OP.CALL){
-
-            }
-            else if(statement.type == TYPE_OP.CALL_JS){
-                
-            }
             else if(statement.type == TYPE_OP.RETURN){
 
-            }
+            }     
             else if(statement.type == TYPE_OP.THROW){
 
             }
@@ -160,8 +233,7 @@ function buildSymbolTable(statements, currentScope, isGlobal){
 
             }
             else{
-                //TODO
-                console.error(statement.type + " aun no ha sido implementado");
+                throwError(`Expression ${statement.type} is not a statement`, statement);
             }
         }catch(error){
             console.log(error);
@@ -171,8 +243,9 @@ function buildSymbolTable(statements, currentScope, isGlobal){
 }
 
 function addScope(id, type, padre_id){
-    if(type == "Block"){
+    if(type == "_block"){
         id = id + "_" + (_idBlock++)
+        _symbolTable.find(scope => scope.id == padre_id).addSymbol({id: id, type: "_block", jType: "", scope: padre_id, size: -1, pos: -1})
     }
     var scope = new Scope(id, type, padre_id);
     _symbolTable.push(scope);
@@ -211,6 +284,7 @@ function compile(ast){
     fs.writeFileSync(__dirname + '/../debug/ast.json', JSON.stringify(ast));
 
     var scope_Global = addScope("_global", "_global", null);
+    addNativeFuncs();
     _relativePos = 0;
     _idBlock = 0;
     
@@ -246,7 +320,7 @@ module.exports.compile = (sourceStr) => {
         
         //prepare symbolTable for report
         symbolTableUnified = [];
-        _symbolTable.forEach(scope => {
+        _symbolTable.forEach(scope => {            
             symbolTableUnified = symbolTableUnified.concat(scope.symbols);
         })
 
@@ -256,8 +330,23 @@ module.exports.compile = (sourceStr) => {
         console.error(e);
         symbolTableUnified = [];
         _symbolTable.forEach(scope => {
-            symbolTableUnified.concat(symbolTableUnified, scope.symbols);
+            symbolTableUnified = symbolTableUnified.concat(symbolTableUnified, scope.symbols);
         })
         return {C3D: "#check error report", errorTable: _errores, symbolTable: symbolTableUnified, ast: "digraph ast{}"}
     }
+}
+
+function addNativeFuncs(){
+    _symbolTable[0].addSymbol(new Symbol("_func_PRINT-STRING", "_func", TYPE_VAL.VOID, "_global", -1, -1));
+    
+    
+    var stringScope = new Scope("_obj_STRING", "_obj_def", null);
+    stringScope.addSymbol(new Symbol("_func_STRING_TOCHARARRAY", "_func", "CHAR[]", "_obj_STRING", -1, -1));
+    stringScope.addSymbol(new Symbol("_func_STRING_LENGTH", "_func", "INTEGER", "_obj_STRING", -1, -1));
+    stringScope.addSymbol(new Symbol("_func_STRING_TOUPPERCASE", "_func", "STRING", "_obj_STRING", -1, -1));
+    stringScope.addSymbol(new Symbol("_func_STRING_TOLOWERCASE", "_func", "STRING", "_obj_STRING", -1, -1));
+    stringScope.addSymbol(new Symbol("_func_STRING_CHARAT-INTEGER", "_func", "CHAR", "_obj_STRING", -1, -1));
+    _symbolTable.push(stringScope);
+    _symbolTable[0].addSymbol(new Symbol("_obj_STRING", "_obj_def", "STRING", "_global", -1, -1))
+
 }

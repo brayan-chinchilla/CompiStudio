@@ -7,7 +7,7 @@
 
     /**
         parser.parseError = (str, hash) => {
-            _errores.push({type:"SINTAX", detail:`Found: ${hash.token}\nExpected: ${hash.expected}`, line: hash.loc.first_line, column: hash.loc.first_column})
+    _errores.push({type:"SINTAX", detail:`Found: ${hash.token}\nExpected: ${hash.expected.join(' ').split("'").join("")}`, line: hash.loc.first_line, column: hash.loc.first_column})
             if (hash.recoverable) {
                 this.trace(str);
             } else {
@@ -55,7 +55,7 @@
 "=="                                        return 'EQUALEQUAL';
 "!="                                        return 'NOTEQUAL';
 "="                                         return "EQUAL";
-"["                                         return 'BRACKET_L';
+"["                                         return "BRACKET_L";
 "]"                                         return 'BRACKET_R';
 "("                                         return 'PAR_L';
 ")"                                         return 'PAR_R';
@@ -109,6 +109,8 @@
 \"                                          { strBuffer = ""; this.begin('STRING'); }
 \'                                          { this.begin('CHAR'); }
 ([a-zA-Z])[a-zA-ZñÑ0-9_.]*".j"	            return 'FILENAME';
+([a-zA-Z])[a-zA-ZñÑ0-9_]*\s*"[]"	        { yytext = yytext.split(" ").join("").toUpperCase(); return 'ARRAY_CHAPUZ';}
+([a-zA-Z])[a-zA-ZñÑ0-9_]*\s*"("             { yytext = yytext.replace("(", "").split(" ").join("").toUpperCase(); return 'CALL_CHAPUZ';}
 ([a-zA-Z])[a-zA-ZñÑ0-9_]*	                return 'ID';
 
 
@@ -142,7 +144,6 @@
 /* Asociación de operadores y precedencia */
 %right  'EQUAL' 'COLONEQUAL'
 %left   'R_THROW'
-%right  'TERNARY' 'COLON'
 %left   'MINUSMINUS' 'PLUSPLUS'
 %left   'XOR'
 %left   'OR'
@@ -153,9 +154,10 @@
 %left   'TIMES' 'DIVIDE' 'MODULE'
 %right  'POW'
 %right  'NOT' 'DOLLAR' UMINUS
-%left   'PAR_L' 'PAR_R' 'BRACKET_L' 'BRACKET_R'
+%left   'BRACE_L' 'BRACE_R'
+%left   'PAR_L' 'PAR_R' 
+%left   'BRACKET_L' 'BRACKET_R'
 %left   'DOT'
-%left   ID
 
 %start ini
 
@@ -178,7 +180,7 @@ l_global
     | error SEMICOLON
         { $$ = []; }
     | l_global error SEMICOLON
-        { /*nothing*/ }
+        { $$ = $1 }
 ;
 
 global
@@ -188,6 +190,10 @@ global
         { $$ = $1; }
     | varDeclar
         { $$ = $1; }
+    | varDeclar l_id
+        { $$ = {type: TYPE_OP.DECLAR_LIST, jType: $1.jType, l_id: $2, exp: null, line: @$.first_line, column: @$.first_column}; $2.unshift($1.id); }
+    | varDeclar l_id EQUAL exp
+        { $$ = {type: TYPE_OP.DECLAR_LIST, jType: $1.jType, l_id: $2, exp: $4, line: @$.first_line, column: @$.first_column}; $2.unshift($1.id) }
     | defineStruct
         { $$ = $1; }
 ;
@@ -212,14 +218,14 @@ import_list
 ;
 
 funcDeclar
-    : type ID PAR_L l_param PAR_R BRACE_L l_statement BRACE_R
-        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $1, name: $2.toUpperCase(), params: $4, block: $7, line: @$.first_line, column: @$.first_column}; }
-    | R_PUBLIC type ID PAR_L l_param PAR_R BRACE_L l_statement BRACE_R
-        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $2, name: $3.toUpperCase(), params: $5, block: $8, line: @$.first_line, column: @$.first_column}; }
-    | ID ID PAR_L l_param PAR_R BRACE_L l_statement BRACE_R
-        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $1.toUpperCase(), name: $2.toUpperCase(), params: $4, block: $7, line: @$.first_line, column: @$.first_column}; }
-    | R_PUBLIC ID ID PAR_L l_param PAR_R BRACE_L l_statement BRACE_R
-        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $2.toUpperCase(), name: $3.toUpperCase(), params: $5, block: $8, line: @$.first_line, column: @$.first_column}; }
+    : type CALL_CHAPUZ l_param PAR_R BRACE_L l_statement BRACE_R
+        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $1, name: $2, params: $3, block: $6, line: @$.first_line, column: @$.first_column}; }
+    | R_PUBLIC type CALL_CHAPUZ l_param PAR_R BRACE_L l_statement BRACE_R
+        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $2, name: $3, params: $4, block: $7, line: @$.first_line, column: @$.first_column}; }
+    | ID CALL_CHAPUZ l_param PAR_R BRACE_L l_statement BRACE_R
+        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $1, name: $2, params: $3, block: $6, line: @$.first_line, column: @$.first_column}; }
+    | R_PUBLIC ID CALL_CHAPUZ l_param PAR_R BRACE_L l_statement BRACE_R
+        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $2, name: $3, params: $4, block: $7, line: @$.first_line, column: @$.first_column}; }
 ;
 
 l_param
@@ -239,12 +245,16 @@ l_statement
     |
         { $$ = []; }
     | l_statement error SEMICOLON
-        { /*nothing*/ }
+        { $$ = $1; }
 ;
 
 statement
     : varDeclar
         { $$ = $1; }
+    | varDeclar l_id
+        { $$ = {type: TYPE_OP.DECLAR_LIST, jType: $1.jType, l_id: $2, exp: null, line: @$.first_line, column: @$.first_column}; $2.unshift($1.id); }
+    | varDeclar l_id EQUAL exp
+        { $$ = {type: TYPE_OP.DECLAR_LIST, jType: $1.jType, l_id: $2, exp: $4, line: @$.first_line, column: @$.first_column}; $2.unshift($1.id) }
     | varAssign
         { $$ = $1; }
     | jump
@@ -285,7 +295,14 @@ varDeclar
     | type ID 
         { $$ = {type: TYPE_OP.DECLAR, jType: $1, id: $2.toUpperCase(), exp: null, line: @$.first_line, column: @$.first_column}; }
     | ID ID 
-        { $$ = {type: TYPE_OP.DECLAR, jType: $1.toUpperCase(), id: $2.toUpperCase(), exp: null, line: @$.first_line, column: @$.first_column}; }
+      { $$ = {type: TYPE_OP.DECLAR, jType: $1.toUpperCase(), id: $2.toUpperCase(), exp: null, line: @$.first_line, column: @$.first_column}; }
+;
+
+l_id
+    : l_id COMMA ID
+        { $$ = $1; $1.push($3.toUpperCase()); }
+    | COMMA ID
+        { $$ = [$2.toUpperCase()] }
 ;
 
 varAssign
@@ -300,8 +317,8 @@ type
         { $$ = $1 + "[]"}
     | R_VOID
         { $$ = TYPE_VAL.VOID }
-    | ID BRACKET_L BRACKET_R
-        { $$ = $1.toUpperCase()  + "[]"}
+    | ARRAY_CHAPUZ
+        { $$ = $1.toUpperCase() }
 ;
 
 primType
@@ -372,13 +389,6 @@ case
         { $$ = {type: TYPE_OP.CASE, cond: null, ifTrue: $3, line: @$.first_line, column: @$.first_column}; }
 ;
 
-call
-    : exp PAR_L l_exp PAR_R
-        { $$ = {type:TYPE_OP.CALL, call: $1, params: $3, line: @$.first_line, column: @$.first_column}; }
-    | exp PAR_L l_assign PAR_R
-        { $$ = {type:TYPE_OP.CALL_JS, call: $1, params: $3, line: @$.first_line, column: @$.first_column}; }
-;
-
 l_assign
     : l_assign COMMA varAssign
         { $1.push($3); $$ = $1 }
@@ -401,11 +411,13 @@ access
 ;
 
 exp
-    :  ID
+    : ID
         { $$ = { type: TYPE_OP.ID, val:$1.toUpperCase(), line: @$.first_line, column: @$.first_column}; }
+    | CALL_CHAPUZ l_exp PAR_R
+        { $$ = {type:TYPE_OP.CALL, call: $1, params: $2, line: @$.first_line, column: @$.first_column}; }
+    | CALL_CHAPUZ l_assign PAR_R
+        { $$ = {type:TYPE_OP.CALL_JS, call: $1, params: $2, line: @$.first_line, column: @$.first_column}; }
     | atomic
-        { $$ = $1; }
-    | call
         { $$ = $1; }
     | exp_arithmetic
         { $$ = $1; }
@@ -413,8 +425,6 @@ exp
         { $$ = $1; }
     | BRACE_L l_exp BRACE_R
         { $$ = {type: TYPE_OP.ARRAY_DEF, val: $2, line: @$.first_line, column: @$.first_column}; }
-    | exp TERNARY exp COLON exp
-        { $$ = {type: TYPE_OP.TERNARY, cond: $1, ifTrue: $3, ifFalse: $5, line: @$.first_line, column: @$.first_column}; }
     | PAR_L exp PAR_R
         { $$ = $2; }
     | access
@@ -429,8 +439,8 @@ exp
         { $$ = { type: TYPE_OP.STRC, jType: $2.toUpperCase() + "[]", exp: $4, line: @$.first_line, column: @$.first_column}; }
     | R_STRC primType BRACKET_L exp BRACKET_R
         { $$ = { type: TYPE_OP.STRC, jType: $2 + "[]", exp: $4, line: @$.first_line, column: @$.first_column}; }
-    | R_STRC ID PAR_L PAR_R
-        { $$ = { type: TYPE_OP.STRC, jType: $2.toUpperCase(), exp: null, line: @$.first_line, column: @$.first_column}; }
+    | R_STRC CALL_CHAPUZ PAR_R
+        { $$ = { type: TYPE_OP.STRC, jType: $2, exp: null, line: @$.first_line, column: @$.first_column}; }
     | DOLLAR exp
         { $$ = {type: TYPE_OP.DOLLAR, exp: $2, line: @$.first_line, column: @$.first_column}; }
 ;

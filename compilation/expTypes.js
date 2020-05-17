@@ -1,6 +1,8 @@
 let TYPE_OP = require('./util').TYPE_OP
 let TYPE_VAL = require('./util').TYPE_VAL
 let isPrimType = require('./util').isPrimType
+let isImplicitCast = require('./util').isImplicitCast;
+
 
 var _symbolTable;
 var _currentScope;
@@ -50,12 +52,18 @@ function maxType(type1, type2){
 }
 
 function getExpType(exp){
+    var jType = getExpType2(exp);
+    exp.jType = jType;
+    return jType;
+}
+
+function getExpType2(exp){
     switch(exp.type){
-        case TYPE_OP.CALL:
-            return getType_Call(exp);
         case TYPE_OP.CALL_JS:
             return getType_CallJs(exp);
         //already implemented
+        case TYPE_OP.CALL:
+            return getType_Call(exp);
         case TYPE_OP.ARRAY_DEF:
             return getType_ArrayDef(exp);
         case TYPE_OP.DOT:
@@ -108,20 +116,64 @@ function getExpType(exp){
     }
 }
 
-function getType_ArrayDef(exp){
-    var expList = exp.val;
-    if(expList.length == 0)
-        throwError(`Expected: {l_exp}\nFound: {}`, exp);
+function getType_Call(exp){
+    var funcId = "_func_" + exp.call;
+    exp.params.forEach((paramExp) => {
+        funcId += "-" + getExpType(paramExp)
+    })
 
-    return getExpType(expList[0]);
+    //search for exact match
+    var funcSymbol = _currentScope.getSymbol(_symbolTable, funcId, _currentScope.id.startsWith("_obj_") ? true : false);
+    if(funcSymbol){
+        exp.resolvedCall = funcId.split("-").join("_")
+        return funcSymbol.jType;
+    }
+    
+    //try casting
+    var possibleFuncs;
+    
+    if(_currentScope.id.startsWith("_obj_"))
+        possibleFuncs = _currentScope.symbols.filter(funcSym => funcSym.id.startsWith("_func_" + exp.call) && funcSym.id.split("-").length - 1 == exp.params.length)
+    else
+        possibleFuncs = _symbolTable[0].symbols.filter(funcSym => funcSym.id.startsWith("_func_" + exp.call) && funcSym.id.split("-").length - 1 == exp.params.length)
+    
+    var callParamTypes = funcId.split("-").slice(1)
+
+    var foundFunc = possibleFuncs.find(possibleFunc => {
+        var possibleFuncParamTypes = possibleFunc.id.split("-").slice(1);
+
+        for(var i = 0; i < callParamTypes.length; i++){
+            if(callParamTypes[i] != possibleFuncParamTypes[i] && !isImplicitCast(possibleFuncParamTypes[i], callParamTypes[i]))
+                return false;
+        }
+        return true;
+    })
+
+    if(!foundFunc)
+        throwError(`No function found ${funcId}`, exp);
+    
+    exp.resolvedCall = foundFunc.id.split("-").join("_")
+    return foundFunc.jType;
 }
 
 function getType_Dot(exp){
     var typeBase = getExpType(exp.base);
 
+    if(! _symbolTable.some(scope => scope.id == "_obj_" + typeBase))
+        throwError(`${typeBase} is not an object`, exp);
+
     //change scope to objects scope
     _currentScope = _symbolTable.find((scope) => scope.id == "_obj_" + typeBase)
     return getExpType(exp.next);
+}
+
+function getType_Id(exp){
+    var sym = _currentScope.getSymbol(_symbolTable, exp.val, _currentScope.id.startsWith("_obj_") ? true : false);
+
+    if(sym == null)
+        throwError(`No such ${exp.val} in current context`, exp);
+
+    return sym.jType;
 }
 
 function getType_Access(exp){
@@ -137,20 +189,21 @@ function getType_Access(exp){
     return typeBase.replace("[]", "");
 }
 
+function getType_ArrayDef(exp){
+    var expList = exp.val;
+    if(expList.length == 0)
+        throwError(`Expected: {l_exp}\nFound: {}`, exp);
+
+    return getExpType(expList[0]) + "[]";
+}
+
 function getType_Update(exp){
     var typeId = getExpType(exp.op1);
 
-    if(typeId != TYPE_VAL.INTEGER && typeId != TYPE_VAL.DOUBLE)
+    if(!isNumeric(typeId))
         throwError(`Invalid op\n${typeId} ${exp.type == TYPE_OP.PLUSPLUS ? '++' : '--'}`, exp);
 
     return typeId;
-}
-
-function getType_Id(exp){
-    var sym = currentScope.getSymbol(symbolTable, exp.val, false);
-    return sym.jType;
-
-    //TODO error if ID does not exist
 }
 
 function getType_Strc(exp){
@@ -167,11 +220,11 @@ function getType_Atomic(exp){
 }
 
 function getType_Plus(exp){
-    var type1 = getExpType(exp.op1);
-    var type2 = getExpType(exp.op2);
+    var type1 = getExpType(exp.op1).toUpperCase();
+    var type2 = getExpType(exp.op2).toUpperCase();
 
     //If there is a string + anyPrim || char + char
-    if(type1.toUpperCase() == "STRING" && isPrimType(type2) || type2.toUpperCase() == "STRING" && isPrimType(type1) || type1 == TYPE_VAL.CHAR && type2 == TYPE_VAL.CHAR)
+    if(type1 == "STRING" && type2 == "STRING" || type1 == "STRING" && isPrimType(type2) || type2 == "STRING" && isPrimType(type1) || type1 == TYPE_VAL.CHAR && type2 == TYPE_VAL.CHAR)
         return "STRING";
 
     //If numeric + numeric
@@ -251,11 +304,11 @@ function getType_Not(exp){
 }
 
 function getType_EqualVal(exp){
-    var type1 = getExpType(exp.op1);
-    var type2 = getExpType(exp.op2);
+    var type1 = getExpType(exp.op1).toUpperCase();
+    var type2 = getExpType(exp.op2).toUpperCase();
 
     //String == String || boolean == boolean || numeric == numeric
-    if(type1 == "STRING" && type1 != "STRING" || type1 == TYPE_VAL.BOOLEAN && type2 == TYPE_VAL.BOOLEAN || isNumeric(type1) && isNumeric(type2))
+    if(type1 == "STRING" && type2 != "STRING" || type1 == TYPE_VAL.BOOLEAN && type2 == TYPE_VAL.BOOLEAN || isNumeric(type1) && isNumeric(type2))
         return TYPE_VAL.BOOLEAN;
 
     throwErrorOp(type1, type2, exp);
@@ -266,10 +319,18 @@ function getType_EqualRef(exp){
     var type2 = getExpType(exp.op2);
 
     //fail if prim or types are not the same
-    if(isPrimType(type1) || isPrimType(type2) || type1 != type2)
+    if(isPrimType(type1) || isPrimType(type2))
         throwErrorOp(type1, type2, exp);
 
-    return TYPE_VAL.BOOLEAN;
+    //if either one is null
+    if(type1 == TYPE_VAL.NULL || type2 == TYPE_VAL.NULL)
+        return TYPE_VAL.BOOLEAN;
+
+    //if none is null check they are the same type
+    if(type1 != type2)
+        throwErrorOp(type1, type2, exp);
+
+    return TYPE_VAL.BOOLEAN;    
 }
 
 function getType_Cast(exp){
