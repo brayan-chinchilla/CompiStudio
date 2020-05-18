@@ -117,6 +117,15 @@ function getExpType2(exp){
 }
 
 function getType_Call(exp){
+    //check if is function print
+    if(exp.call.toUpperCase() == "PRINT" && exp.params.length == 1){
+        var paramToPrintType = getExpType(exp.params[0]);
+
+        exp.resolvedCall = "_func_print_" + (isPrimType(paramToPrintType) || paramToPrintType.toUpperCase() == "STRING" ? paramToPrintType : "INTEGER")
+        exp.resolvedReturn = TYPE_VAL.VOID;
+        return TYPE_VAL.VOID;
+    }
+
     var funcId = "_func_" + exp.call;
     exp.params.forEach((paramExp) => {
         funcId += "-" + getExpType(paramExp)
@@ -126,6 +135,7 @@ function getType_Call(exp){
     var funcSymbol = _currentScope.getSymbol(_symbolTable, funcId, _currentScope.id.startsWith("_obj_") ? true : false);
     if(funcSymbol){
         exp.resolvedCall = funcId.split("-").join("_")
+        exp.resolvedReturn = funcSymbol.jType;
         return funcSymbol.jType;
     }
     
@@ -153,6 +163,7 @@ function getType_Call(exp){
         throwError(`No function found ${funcId}`, exp);
     
     exp.resolvedCall = foundFunc.id.split("-").join("_")
+    exp.resolvedReturn = foundFunc.jType;
     return foundFunc.jType;
 }
 
@@ -209,10 +220,20 @@ function getType_Update(exp){
 function getType_Strc(exp){
     var type = exp.jType.replace("[]", "");
     
-    if(!isPrimType(type) && ! _symbolTable[0].getSymbol(_symbolTable, "_obj_" + type, true))
+    if(exp.exp != null && getExpType(exp.exp) != TYPE_VAL.INTEGER)
+        throwError(`Expected INTEGER`, exp.exp);
+
+    if(type == "STRING" && exp.exp == null)
         throwError(`Unknown type ${exp.jType}`, exp);
 
-    return exp.jType;
+        
+    var objDefSymbol = _symbolTable[0].getSymbol(_symbolTable, "_obj_" + type, true);
+    if(isPrimType(type) && exp.exp != null || objDefSymbol){
+        exp.objDefSymbol = objDefSymbol;
+        return exp.jType;
+    }
+        
+    throwError(`Unknown type ${exp.jType}`, exp);
 }
 
 function getType_Atomic(exp){
@@ -308,7 +329,7 @@ function getType_EqualVal(exp){
     var type2 = getExpType(exp.op2).toUpperCase();
 
     //String == String || boolean == boolean || numeric == numeric
-    if(type1 == "STRING" && type2 != "STRING" || type1 == TYPE_VAL.BOOLEAN && type2 == TYPE_VAL.BOOLEAN || isNumeric(type1) && isNumeric(type2))
+    if(type1 == "STRING" && type2 == "STRING" || type1 == TYPE_VAL.BOOLEAN && type2 == TYPE_VAL.BOOLEAN || isNumeric(type1) && isNumeric(type2))
         return TYPE_VAL.BOOLEAN;
 
     throwErrorOp(type1, type2, exp);

@@ -65,6 +65,7 @@ function processInstructions(instructions, isGlobal = false){
             instruction.params.forEach((param) => {
                 funcId += "-" + param.jType
             })
+
             //add function name to global scope
             _globalScope.addSymbol(new Symbol(funcId, "_func", instruction.returnType, "_global", -1, -1))
 

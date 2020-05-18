@@ -45,7 +45,7 @@ L7:
     t1 = p + 2;
     t2 = stack[t1];
     if (t2 == 1) goto L8;
-    Heap[h] = 146;
+    Heap[h] = 102;
     h = h + 1;
     Heap[h] = 97;
     h = h + 1;
@@ -421,4 +421,141 @@ proc _func_trunk_any begin
     t2 = t1 % 1;
     t3 = t1 - t2;
     Stack[p] = t3;
+end
+
+proc _func_print_char begin
+    t0 = h;
+    t1 = p + 1;
+    t2 = Stack[t1];
+    print("%c", t2);
+    print("%c", 10);
+end
+
+proc _func_print_integer begin
+    t0 = h;
+    t1 = 0;
+    t2 = p + 1;
+    t3 = Stack[t2];
+    t2 = 0;
+    if (t3 <> 0) goto L50;
+    t1 = t1 + 1;
+L50:
+    if (t3 >= 0) goto L51;
+    t3 = -1 * t3;
+    print("%c", 45);
+L51:
+    if (t3 <= 0) goto L52;
+    t2 = t2 * 10;
+    t5 = t3 % 10;
+    t2 = t2 + t5;
+    t3 = t3 / 10;
+    t6 = t3 % 1;
+    t3 = t3 - t6;
+    t1 = t1 + 1;
+    goto L51;
+L52:
+    if (t1 <= 0) goto L53;
+    t3 = t2 % 10;
+    t2 = t2 / 10;
+    t6 = t2 % 1;
+    t2 = t2 - t6;
+    t5 = t3 + 48;
+    t1 = t1 - 1;
+    print("%c", t5);
+    goto L52;
+L53:
+    print("%c", 10);
+end
+
+proc _func_print_double begin
+    t0 = h;
+    t8 = 0;
+    t2 = p + 1;
+    t3 = Stack[t2];
+    if (t3 <> 0) goto L54;
+    t1 = t1 + 1;
+L54:
+    t1 = t3 % 1;
+    t3 = t3 - t1;
+    t1 = Stack[t2];
+    t2 = 0;
+    if (t3 >= 0) goto L55;
+    t3 = -1 * t3;
+    print("%c", 45);
+L55:
+    if (t3 <= 0) goto L56;
+    t2 = t2 * 10;
+    t5 = t3 % 10;
+    t2 = t2 + t5;
+    t3 = t3 / 10;
+    t6 = t3 % 1;
+    t3 = t3 - t6;
+    t8 = t8 + 1;
+    goto L55;
+L56:
+    if (t8 <= 0) goto L57;
+    t3 = t2 % 10;
+    t2 = t2 / 10;
+    t6 = t2 % 1;
+    t2 = t2 - t6;
+    t8 = t8 - 1;
+    t5 = t3 + 48;
+    print("%c", t5);
+    goto L56;
+L57:
+    print("%c", 46);
+    t6 = 0;
+L58:
+    if (t6 == 2) goto L59;
+    t1 = t1 * 10;
+    t3 = t1 % 10;
+    t2 = t1 % 1;
+    t3 = t3 - t2;
+    t5 = t3 + 48;
+    print("%c", t5);
+    t6 = t6 + 1;
+    goto L58;
+L59:
+    print("%c", 10);
+end
+
+proc _func_print_boolean begin
+    t0 = h;
+    t1 = p + 1;
+    t2 = Stack[t1];
+    if (t2 == 1) goto L60;
+    print("%c", 102);
+    print("%c", 97);
+    print("%c", 108);
+    print("%c", 115);
+    print("%c", 101);
+    goto L49;
+L60:
+    print("%c", 116);
+    print("%c", 114);
+    print("%c", 117);
+    print("%c", 101);
+L49:
+    print("%c", 10);
+end
+
+proc _func_equal_string_string begin
+    t0 = p + 1;
+    t1 = Stack[t0];
+    t2 = Heap[t1];
+    t0 = p + 2;
+    t0 = Stack[t0];
+    t3 = Heap[t0];
+    Stack[p] = 0;
+L61:
+    if (t2 <> t3) goto L63;
+    if (t2 == 0) goto L62;
+    t0 = t0 + 1;
+    t3 = Heap[t0];
+    t1 = t1 + 1;
+    t2 = Heap[t1];
+    goto L61;
+L62:
+    Stack[p] = 1;
+L63:
 end

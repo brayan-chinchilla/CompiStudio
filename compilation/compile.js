@@ -52,6 +52,9 @@ function buildSymbolTable(statements, currentScope, isGlobal){
                     }
                 }
                 else{
+                    if(currentScope.someSymbol(statement.id)){
+                        throwError(`There is already a symbol ${statement.id} in the current context`, statement);
+                    }
                     var sym = new Symbol(statement.id, isPrimType(statement.jType) ? "_local_prim" : "_local_obj", statement.jType, currentScope.id, 1, _relativePos++);
                     currentScope.addSymbol(sym);
 
@@ -101,6 +104,9 @@ function buildSymbolTable(statements, currentScope, isGlobal){
                         }
                     }
                     else{
+                        if(currentScope.someSymbol(id)){
+                            throwError(`There is already a symbol ${id} in the current context`, statement);
+                        }
                         var sym = new Symbol(id, isPrimType(statement.jType) ? "_local_prim" : "_local_obj", statement.jType, currentScope.id, 1, _relativePos++);
                         currentScope.addSymbol(sym);
     
@@ -131,18 +137,25 @@ function buildSymbolTable(statements, currentScope, isGlobal){
                 var typeSym = getExpType(statement.id, _symbolTable, currentScope);
                 var typeExp = getExpType(statement.exp, _symbolTable, currentScope);
 
-                if(statement.type == TYPE_OP.ID && currentScope.getSymbol(_symbolTable, statement.id.val, false).const)
+                if(statement.id.type == TYPE_OP.ID && currentScope.getSymbol(_symbolTable, statement.id.val, false).const)
                     throwError(`Attempt to modify constant ${statement.id.val}`, statement);
 
                 if(typeSym != typeExp && !isImplicitCast(typeSym, typeExp))
                     throwError(`Type missmatch\n${typeSym} = ${typeExp}`, statement);
             }
             else if(statement.type == TYPE_OP.IF){
+                if(statement.cond){
+                    var condType = getExpType(statement.cond, _symbolTable, currentScope)
+                    if(condType != TYPE_VAL.BOOLEAN){
+                        throwError(`Expected: BOOLEAN\nFound: ${condType}`, statement.cond);
+                    }
+                }
+
                 var newScope = addScope("_if", "_block", currentScope.id);
                 buildSymbolTable(statement.ifTrue, newScope, false);
 
                 if(statement.ifFalse){
-                    buildSymbolTable(statement.ifFalse, currentScope, false)
+                    buildSymbolTable([statement.ifFalse], currentScope, false)
                 }
             }
             else if(statement.type == TYPE_OP.SWITCH){
@@ -156,16 +169,32 @@ function buildSymbolTable(statements, currentScope, isGlobal){
                 var newScope = addScope("_for", "_block", currentScope.id);
                 if(statement.init)
                     buildSymbolTable([statement.init], newScope, false);
+                if(statement.cond){
+                    var condType = getExpType(statement.cond, _symbolTable, newScope)
+                    if(condType != TYPE_VAL.BOOLEAN){
+                        throwError(`Expected: BOOLEAN\nFound: ${condType}`, statement.cond);
+                    }
+                }
                 if(statement.update)
                     buildSymbolTable([statement.update], newScope, false);
 
                 buildSymbolTable(statement.block, newScope, false);
             }
             else if(statement.type == TYPE_OP.WHILE){
+                var condType = getExpType(statement.cond, _symbolTable, currentScope)
+                if(condType != TYPE_VAL.BOOLEAN){
+                    throwError(`Expected: BOOLEAN\nFound: ${condType}`, statement.cond);
+                }
+
                 var newScope = addScope("_while", "_block", currentScope.id);
                 buildSymbolTable(statement.block, newScope, false);
             }
             else if(statement.type == TYPE_OP.DO_WHILE){
+                var condType = getExpType(statement.cond, _symbolTable, currentScope)
+                if(condType != TYPE_VAL.BOOLEAN){
+                    throwError(`Expected: BOOLEAN\nFound: ${condType}`, statement.cond);
+                }
+
                 var newScope = addScope("_do_while", "_block", currentScope.id);
                 buildSymbolTable(statement.block, newScope, false);
             }
@@ -187,6 +216,7 @@ function buildSymbolTable(statements, currentScope, isGlobal){
                     newScope.addSymbol(sym);
                 })
 
+                _funcReturnType = currentScope.getSymbol(_symbolTable, funcId, true).jType;
                 buildSymbolTable(statement.block, newScope, false);
 
                 //update size of scope and size of symbol in global scope
@@ -219,13 +249,19 @@ function buildSymbolTable(statements, currentScope, isGlobal){
                 if(!isValid)
                     throwError("Continue should be inside loop", statement);
             }
-            else if(statement.type == TYPE_OP.CALL || statement.type == TYPE_OP.CALL_JS || statement.type == TYPE_OP.PLUSPLUS || statement.type == TYPE_OP.DOT || TYPE_OP.MINUSMINUS){
+            else if(statement.type == TYPE_OP.CALL || statement.type == TYPE_OP.CALL_JS || statement.type == TYPE_OP.PLUSPLUS || statement.type == TYPE_OP.DOT || statement.type == TYPE_OP.MINUSMINUS){
                 getExpType(statement, _symbolTable, currentScope);
             }
-            //pending implementation
             else if(statement.type == TYPE_OP.RETURN){
-
+                if(statement.exp == null)
+                    return;
+                else{
+                    var returnType = getExpType(statement.exp, _symbolTable, currentScope);
+                    if(returnType != _funcReturnType)
+                        throwError(`Expected: ${_funcReturnType}\nFound: ${returnType}`, statement);
+                }
             }     
+            //pending implementation
             else if(statement.type == TYPE_OP.THROW){
 
             }
@@ -304,6 +340,7 @@ var _relativePos = 0;
 var _idBlock = 0;
 var _symbolTable = [];
 var _errores = [];
+var _funcReturnType;
 
 module.exports.compile = (sourceStr) => {
     _relativePos = 0;
@@ -336,9 +373,7 @@ module.exports.compile = (sourceStr) => {
     }
 }
 
-function addNativeFuncs(){
-    _symbolTable[0].addSymbol(new Symbol("_func_PRINT-STRING", "_func", TYPE_VAL.VOID, "_global", -1, -1));
-    
+function addNativeFuncs(){    
     
     var stringScope = new Scope("_obj_STRING", "_obj_def", null);
     stringScope.addSymbol(new Symbol("_func_STRING_TOCHARARRAY", "_func", "CHAR[]", "_obj_STRING", -1, -1));

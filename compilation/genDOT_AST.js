@@ -72,7 +72,7 @@ function genDOT_AST(instructions, parentId){
                 genDOT_Exp(inst.exp, id);
                 break;
             case TYPE_OP.IF:
-                genDOT_Exp(inst.cond, id);
+                if(inst.cond) genDOT_Exp(inst.cond, id);
                 genDOT_AST(inst.ifTrue, genNode("L_STATEMENT", id));
                 if(inst.ifFalse) genDOT_AST([inst.ifFalse], id)
                 break;
@@ -102,8 +102,7 @@ function genDOT_AST(instructions, parentId){
             case TYPE_OP.CONTINUE:
             case TYPE_OP.BREAK:                
             case TYPE_OP.RETURN:
-                if(inst.exp) genDOT_Exp(inst.exp, genNode(inst.type, id))
-                else genNode(inst.type, id);
+                if(inst.exp) genDOT_Exp(inst.exp, id)
                 break;
             case TYPE_OP.DEFINE_STRC:
                 genTerminal(inst.id, id);

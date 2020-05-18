@@ -82,6 +82,7 @@
 "else"                                      return 'R_ELSE';
 "switch"                                    return 'R_SWITCH';
 "case"                                      return 'R_CASE';
+"default"                                   return 'R_DEFAULT';
 
 "continue"                                  return 'R_CONTINUE';
 "break"                                     return 'R_BREAK';
@@ -109,7 +110,7 @@
 \"                                          { strBuffer = ""; this.begin('STRING'); }
 \'                                          { this.begin('CHAR'); }
 ([a-zA-Z])[a-zA-ZñÑ0-9_.]*".j"	            return 'FILENAME';
-([a-zA-Z])[a-zA-ZñÑ0-9_]*\s*"[]"	        { yytext = yytext.split(" ").join("").toUpperCase(); return 'ARRAY_CHAPUZ';}
+([a-zA-Z])[a-zA-ZñÑ0-9_]*"[]"	            { yytext = yytext.toUpperCase(); return 'ARRAY_CHAPUZ';}
 ([a-zA-Z])[a-zA-ZñÑ0-9_]*\s*"("             { yytext = yytext.replace("(", "").split(" ").join("").toUpperCase(); return 'CALL_CHAPUZ';}
 ([a-zA-Z])[a-zA-ZñÑ0-9_]*	                return 'ID';
 
@@ -223,9 +224,9 @@ funcDeclar
     | R_PUBLIC type CALL_CHAPUZ l_param PAR_R BRACE_L l_statement BRACE_R
         { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $2, name: $3, params: $4, block: $7, line: @$.first_line, column: @$.first_column}; }
     | ID CALL_CHAPUZ l_param PAR_R BRACE_L l_statement BRACE_R
-        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $1, name: $2, params: $3, block: $6, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $1.toUpperCase(), name: $2, params: $3, block: $6, line: @$.first_line, column: @$.first_column}; }
     | R_PUBLIC ID CALL_CHAPUZ l_param PAR_R BRACE_L l_statement BRACE_R
-        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $2, name: $3, params: $4, block: $7, line: @$.first_line, column: @$.first_column}; }
+        { $$ = {type: TYPE_OP.FUNC_DEF, returnType: $2.toUpperCase(), name: $3, params: $4, block: $7, line: @$.first_line, column: @$.first_column}; }
 ;
 
 l_param
